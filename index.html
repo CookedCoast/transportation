@@ -1,0 +1,1393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SECOG Active Transportation Projects</title>
+<meta name="description" content="CTDOT active Capital, LOTCIP and Maintenance Resurfacing projects in the Southeastern Connecticut planning region, with Capital funding by source, read live from CTDOT open data services.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&display=swap">
+<style>
+/* ---------- tokens: SECOG palette (secogct.gov) ---------- */
+:root{
+  --navy:#20326e; --blue:#1f73ae; --green:#76b053;
+  --bg:#f8f9f7; --panel:#ffffff; --ink:#20326e; --ink-2:#444444; --ink-3:#6b7280;
+  --line:#dbdcde; --line-2:#eeeff0; --accent:#1f73ae; --accent-ink:#ffffff; --accent-2:#20326e;
+  /* map program colours: brand blue / navy / green + a work-zone orange for construction */
+  --cap-pre:#1f73ae; --cap-con:#d9772b; --lotcip:#4f9a2f; --mrp:#20326e;
+  --chip:#eef3f8; --hover:#f3f6fa; --sel:#e4eef7; --warn:#9a5b00; --strong:#20326e;
+  --shadow:0 1px 2px rgba(32,50,110,.08),0 2px 10px rgba(32,50,110,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10162a; --panel:#161e36; --ink:#e8edf7; --ink-2:#c3cad9; --ink-3:#8e98ad;
+    --line:#2a3452; --line-2:#212a45; --accent:#5aa7dc; --accent-ink:#0b1426; --accent-2:#9db4e6;
+    --cap-pre:#5aa7dc; --cap-con:#f0a05a; --lotcip:#8cc76a; --mrp:#b9c6ef;
+    --chip:#222c4a; --hover:#1c2541; --sel:#1f3152; --warn:#e9b45a; --strong:#f2f5fb;
+    --shadow:0 1px 2px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10162a; --panel:#161e36; --ink:#e8edf7; --ink-2:#c3cad9; --ink-3:#8e98ad;
+  --line:#2a3452; --line-2:#212a45; --accent:#5aa7dc; --accent-ink:#0b1426; --accent-2:#9db4e6;
+  --cap-pre:#5aa7dc; --cap-con:#f0a05a; --lotcip:#8cc76a; --mrp:#b9c6ef;
+  --chip:#222c4a; --hover:#1c2541; --sel:#1f3152; --warn:#e9b45a; --strong:#f2f5fb;
+  --shadow:0 1px 2px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink-2);font:14px/1.5 "Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+button,select,input{font:inherit;color:inherit}
+h1,h2,h3{margin:0;font-family:"Golos Text",sans-serif;font-weight:600;color:var(--ink)}
+.cap{text-transform:uppercase;letter-spacing:.03em}
+
+/* ---------- header (mirrors secogct.gov: logo left, blue utility block right) ---------- */
+header{display:flex;align-items:stretch;background:var(--panel);border-bottom:1px solid var(--line);min-height:68px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:16px;padding:10px 22px;flex:1;min-width:0}
+.brand a.logo{display:flex;align-items:center;flex:none;text-decoration:none}
+.brand img{height:34px;width:auto;display:block}
+.brand .logo-fallback{font:700 26px/1 "Golos Text",sans-serif;color:#20326e;letter-spacing:.01em}
+.brand .divider{width:1px;align-self:stretch;margin:6px 0;background:var(--line)}
+.brand h1{font-size:18px;line-height:1.2;color:var(--blue)}
+.brand .sub{color:var(--ink-3);font-size:12.5px;margin-top:2px}
+.townpick{position:relative;display:flex;align-items:center;gap:12px;background:var(--navy);color:#fff;padding:10px 22px}
+.townpick .tp-label{font-size:13px;font-weight:600;color:#fff;text-transform:uppercase;letter-spacing:.04em}
+#tp-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:220px;max-width:320px;padding:7px 12px;border:1px solid rgba(255,255,255,.55);border-radius:6px;background:transparent;color:#fff;font-weight:500;cursor:pointer;text-align:left}
+#tp-btn:hover,#tp-btn[aria-expanded="true"]{background:rgba(255,255,255,.12);border-color:#fff}
+#tp-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tp-btn svg{flex:none}
+#tp-panel{position:absolute;right:22px;top:calc(100% - 4px);z-index:1200;width:340px;max-width:calc(100vw - 32px);background:var(--panel);color:var(--ink-2);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px rgba(32,50,110,.22);padding:10px 0 0}
+#tp-panel[hidden]{display:none}
+.tp-head{display:flex;justify-content:space-between;align-items:center;padding:0 14px 8px;border-bottom:1px solid var(--line-2);font-size:12px;color:var(--ink-3)}
+.tp-head button{border:0;background:none;color:var(--blue);font-weight:600;cursor:pointer;padding:2px 0;font-size:12.5px}
+.tp-head button + button{margin-left:14px}
+.tp-list{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;padding:8px 14px;max-height:min(360px,60vh);overflow:auto}
+.tp-list label{display:flex;align-items:center;gap:7px;padding:4px 0;font-size:13px;cursor:pointer;color:var(--ink-2)}
+.tp-foot{display:flex;justify-content:flex-end;padding:8px 14px 10px;border-top:1px solid var(--line-2)}
+
+/* ---------- KPIs ---------- */
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.kpi{background:var(--panel);padding:10px 18px}
+.kpi .v{font:600 24px/1.15 "Golos Text",sans-serif;color:var(--strong);font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--ink-3);display:flex;align-items:center;gap:6px}
+.sym{flex:none;display:inline-block}
+.sym.poly{width:11px;height:11px;border:2px solid currentColor;border-radius:2px}
+.sym.line{width:16px;height:4px;border-radius:2px;background:currentColor}
+
+/* ---------- main ---------- */
+main{flex:1;display:grid;grid-template-columns:440px 1fr;min-height:0}
+aside{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);background:var(--panel)}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;border:0;background:none;padding:11px 2px 9px;white-space:nowrap;cursor:pointer;color:var(--ink-3);border-bottom:3px solid transparent;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{color:var(--blue);border-bottom-color:var(--blue)}
+.tabs .n{color:var(--ink-3);font-weight:500;margin-left:4px;font-variant-numeric:tabular-nums}
+.filters{padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--line)}
+.filters input[type=search],.filters select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink-2)}
+.filters input:focus,.filters select:focus,#tp-btn:focus-visible,.tp-list input:focus-visible{outline:2px solid var(--green);outline-offset:1px}
+.filters .full{grid-column:1/-1}
+.filters .row{display:flex;align-items:center;gap:6px 16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.filters .row label{display:flex;align-items:center;gap:6px;cursor:pointer}
+input[type=checkbox]{accent-color:var(--blue)}
+.listhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 16px;font-size:12px;color:var(--ink-3);border-bottom:1px solid var(--line-2)}
+.btn{border:0;background:var(--navy);color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.btn:hover{background:#2c4590}
+#list{flex:1;overflow:auto;margin:0;padding:0;list-style:none}
+#list li{padding:10px 16px 10px 13px;border-bottom:1px solid var(--line-2);cursor:pointer;border-left:3px solid transparent}
+#list li:hover{background:var(--hover)}
+#list li.sel{background:var(--sel)}
+#list .t{font-weight:600;font-size:13.5px;line-height:1.3;color:var(--ink)}
+#list .m{font-size:12px;color:var(--ink-3);margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 10px}
+#list .pn{font-variant-numeric:tabular-nums;color:var(--ink-2);font-weight:500}
+.chip{display:inline-block;padding:1px 8px;border-radius:10px;background:var(--chip);font-size:11.5px;color:var(--strong)}
+.empty{padding:28px 18px;color:var(--ink-3);text-align:center}
+#map{min-height:0;background:var(--bg)}
+
+/* ---------- funding ---------- */
+.muted{color:var(--ink-3)}
+#list li.fsum{cursor:default;background:var(--panel);padding:16px;border-left:0}
+#list li.fsum:hover{background:var(--panel)}
+.fsum h2{font-size:13px;color:var(--blue);margin:18px 0 8px}
+.fsum h2:first-child{margin-top:0}
+.fbig{font:600 28px/1.1 "Golos Text",sans-serif;color:var(--strong);font-variant-numeric:tabular-nums}
+.fsum .note{font-size:12px;color:var(--ink-3);margin-top:3px}
+.flev{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 4px}
+.flev div{display:flex;flex-direction:column;border-left:3px solid var(--line);padding-left:8px}
+.flev b{font:600 16px/1.2 "Golos Text",sans-serif;color:var(--strong);font-variant-numeric:tabular-nums}
+.flev span{font-size:11.5px;color:var(--ink-3)}
+.pie{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center}
+.pie svg{width:150px;height:150px;display:block;overflow:visible}
+.pie svg path{stroke:var(--panel);stroke-width:1.5;cursor:default;transition:opacity .12s}
+.pie svg:hover path{opacity:.55}
+.pie svg path:hover{opacity:1}
+.pie .ctr1{font:600 15px "Golos Text",sans-serif;fill:var(--strong)}
+.pie .ctr2{font:500 10px "Golos Text",sans-serif;fill:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
+.pleg{list-style:none;margin:0;padding:0;font-size:12px}
+.pleg li{display:grid!important;grid-template-columns:10px 1fr auto auto;gap:6px;align-items:center;padding:2px 0!important;border:0!important;cursor:default!important}
+.pleg li:hover{background:none!important}
+.pleg .v{font-variant-numeric:tabular-nums;color:var(--ink);text-align:right}
+.pleg .p{font-variant-numeric:tabular-nums;color:var(--ink-3);text-align:right;min-width:34px}
+.pleg .lab{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;font-size:11px;margin-left:8px;vertical-align:2px}
+.seg button{border:0;background:none;padding:2px 8px;cursor:pointer;color:var(--ink-3);font-weight:600;text-transform:none;letter-spacing:0}
+.seg button[aria-pressed="true"]{background:var(--navy);color:#fff}
+.stack{display:flex;height:10px;border-radius:3px;overflow:hidden;background:var(--line-2);margin:6px 0 10px;gap:1px}
+.stack span{display:block;height:100%;min-width:2px}
+.stack.thin{height:5px;margin:6px 0 0}
+table.ftab{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+table.ftab th{font-weight:600;color:var(--ink-3);text-align:right;padding:3px 0 3px 6px;border-bottom:1px solid var(--line)}
+table.ftab th:first-child{text-align:left;padding-left:0}
+table.ftab td{text-align:right;padding:3px 0 3px 6px;border-top:1px solid var(--line-2);white-space:nowrap}
+table.ftab td:first-child{text-align:left;padding-left:0;white-space:normal;color:var(--ink-2)}
+table.ftab tr.tot td{font-weight:600;border-top:1px solid var(--line);color:var(--ink)}
+.sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:0}
+.pp .fsec{margin-top:12px;padding-top:8px;border-top:1px solid var(--line)}
+.pp .fh{font-weight:600;font-size:12.5px;margin-bottom:2px;color:var(--ink)}
+.pp .fh .muted{font-weight:400}
+.pp table.ftab td:first-child{width:auto;font-size:12px}
+.pp .muted{font-size:12px}
+#tip{position:fixed;z-index:1000;pointer-events:none;background:var(--navy);color:#fff;font-size:12px;padding:5px 9px;border-radius:6px;box-shadow:var(--shadow);display:none;max-width:260px}
+
+/* ---------- status / legend / footer ---------- */
+#status{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:800;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);padding:7px 14px;border-radius:20px;font-size:12.5px;color:var(--ink);display:none}
+#status.err{color:var(--warn)}
+.mapwrap{position:relative;min-height:0;display:flex}
+.mapwrap #map{flex:1}
+.legend{position:absolute;left:12px;bottom:24px;z-index:700;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:12px;box-shadow:var(--shadow);color:var(--ink-2)}
+.legend .lt{font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.legend div.r{display:flex;align-items:center;gap:8px;margin:3px 0}
+footer{font-size:11.5px;color:#dfe5f3;padding:8px 22px;background:var(--navy);display:flex;gap:6px 18px;flex-wrap:wrap}
+footer a{color:#fff}
+:root[data-theme="dark"] footer{background:#0b1022}
+:root[data-theme="dark"] .brand a.logo{background:#fff;padding:5px 9px;border-radius:7px}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) footer{background:#0b1022}
+  :root:not([data-theme="light"]) .brand a.logo{background:#fff;padding:5px 9px;border-radius:7px}
+  :root:not([data-theme="light"]) .brand h1,:root:not([data-theme="light"]) .fsum h2,:root:not([data-theme="light"]) .legend .lt,:root:not([data-theme="light"]) .pp .k{color:var(--accent)}
+  :root:not([data-theme="light"]) .tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+}
+:root[data-theme="dark"] .brand h1,:root[data-theme="dark"] .fsum h2,:root[data-theme="dark"] .legend .lt,:root[data-theme="dark"] .pp .k{color:var(--accent)}
+:root[data-theme="dark"] .tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ---------- popup ---------- */
+.leaflet-popup-content-wrapper{border-radius:8px;background:var(--panel);color:var(--ink-2)}
+.leaflet-popup-tip{background:var(--panel)}
+.leaflet-popup-content{margin:12px 14px;font:13px/1.45 "Golos Text",sans-serif;width:330px!important;max-height:min(380px,55vh);overflow:auto}
+.pp h3{font-size:15px;margin-bottom:2px;color:var(--strong)}
+.pp .k{font-size:11px;color:var(--blue);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.pp table{width:100%;border-collapse:collapse}
+.pp td{padding:3px 0;vertical-align:top;border-top:1px solid var(--line-2)}
+.pp td:first-child{color:var(--ink-3);width:44%;padding-right:8px;font-size:12px}
+.pp td:last-child{font-variant-numeric:tabular-nums}
+.pp p{margin:6px 0 8px;color:var(--ink-2);font-size:12.5px}
+.leaflet-container{font-family:inherit}
+.leaflet-container a.leaflet-popup-close-button{color:var(--ink-3)}
+.town-label{background:none;border:0;box-shadow:none;color:var(--navy);opacity:.7;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.town-label::before{display:none}
+
+/* ---------- responsive ---------- */
+@media (max-width:1100px){
+  .brand .sub{display:none}
+}
+@media (max-width:900px){
+  html,body{height:auto}
+  body{min-height:100%}
+  main{flex:none;display:flex;flex-direction:column}
+  .mapwrap{height:60vh;min-height:320px;flex:none}
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .mapwrap{order:-1}
+  aside{border-right:0;border-top:1px solid var(--line)}
+  #list{max-height:none;overflow:visible}
+  .brand{padding:10px 16px}
+  .townpick{padding:10px 16px;width:100%;justify-content:space-between}
+  #tp-btn{flex:1;max-width:none;min-width:0}
+  #tp-panel{right:16px}
+  .brand .divider{display:none}
+}
+@media (max-width:520px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi{padding:8px 16px}
+  .kpi .v{font-size:20px}
+  .brand{flex-wrap:wrap;gap:8px}
+  .brand h1{font-size:16px}
+  .pie{grid-template-columns:1fr}
+  .pie svg{margin:0 auto}
+  .leaflet-popup-content{width:260px!important}
+}
+/* ---------- docked project detail panel ---------- */
+#detail{position:absolute;top:12px;right:12px;bottom:12px;width:390px;max-width:calc(100% - 24px);z-index:760;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(32,50,110,.18);display:flex;flex-direction:column;overflow:hidden}
+#detail[hidden]{display:none}
+.d-head{padding:12px 16px 10px;border-top:5px solid var(--dc,var(--blue))}
+.d-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.d-actions{display:flex;gap:4px;flex:none}
+.d-actions button{border:0;background:none;color:var(--ink-3);cursor:pointer;width:30px;height:30px;border-radius:6px;display:grid;place-items:center}
+.d-actions button:hover{background:var(--hover);color:var(--strong)}
+.d-head h2{font-size:17px;line-height:1.25;color:var(--strong);margin:8px 0 3px}
+.d-num{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.d-tabs{display:flex;gap:2px;padding:0 10px;border-bottom:1px solid var(--line)}
+.d-tabs button{border:0;background:none;padding:9px 8px 8px;cursor:pointer;color:var(--ink-3);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;border-bottom:3px solid transparent;white-space:nowrap}
+.d-tabs button:hover{color:var(--ink)}
+.d-tabs button[aria-selected="true"]{color:var(--strong);border-bottom-color:var(--navy)}
+.d-body{flex:1;overflow:auto;padding:12px 16px 18px;font-size:13px}
+.d-body > p{margin:0 0 10px;color:var(--ink-2);line-height:1.5}
+.dsec h3{font-size:11.5px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 6px}
+.dsec:first-child h3{margin-top:2px}
+dl.kv{display:grid;grid-template-columns:44% 1fr;margin:0}
+dl.kv dt,dl.kv dd{padding:5px 0;border-top:1px solid var(--line-2);margin:0}
+dl.kv dt{color:var(--ink-3);font-size:12px;padding-right:10px}
+dl.kv dd{color:var(--ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+dl.kv dd a{color:var(--blue)}
+.meter{height:8px;border-radius:4px;background:var(--line-2);overflow:hidden;margin:4px 0 2px}
+.meter span{display:block;height:100%;background:var(--blue)}
+.meter-l{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-3)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:2px 0 10px}
+.tiles div{border-left:3px solid var(--line);padding-left:8px}
+.tiles b{display:block;font-size:15px;color:var(--strong);font-variant-numeric:tabular-nums}
+.tiles span{font-size:11.5px;color:var(--ink-3)}
+.routes{font-size:12px;color:var(--ink-2);line-height:1.5}
+.btn.ghost{background:transparent;color:var(--navy);border:1px solid var(--navy)}
+.btn.ghost:hover{background:var(--navy);color:#fff}
+.lh-btns{display:flex;gap:6px;flex:none}
+@media (max-width:900px){
+  #detail{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;max-height:72vh;border-radius:14px 14px 0 0;z-index:1300}
+}
+
+/* ---------- print report (built on demand, hidden on screen) ---------- */
+#report{display:none}
+@media print{
+  @page{size:letter landscape;margin:.45in .5in .6in;
+    @bottom-left{content:"SECOG · Active Transportation Projects · data from CTDOT open data";font:8pt "Golos Text",sans-serif;color:#6b7280}
+    @bottom-right{content:"Page " counter(page) " of " counter(pages);font:8pt "Golos Text",sans-serif;color:#6b7280}}
+  html:root:not([data-print]){--panel:#fff;--ink:#20326e;--ink-2:#333;--ink-3:#6b7280;--line:#cfd3d9;--line-2:#e6e8eb;--strong:#20326e;--blue:#1f73ae;--navy:#20326e;--chip:#eef3f8}
+  html,body{height:auto!important;background:#fff!important;display:block!important}
+  body > *:not(#report){display:none!important}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #report{display:block!important;color:#333;font:9.5pt/1.4 "Golos Text",system-ui,sans-serif}
+}
+.rp-head{display:flex;align-items:center;gap:18px;padding-bottom:10px;border-bottom:3px solid #20326e}
+.rp-head img{height:30px}
+.rp-head .logo-fallback{font:700 22pt/1 "Golos Text",sans-serif;color:#20326e}
+.rp-head h1{font-size:17pt;color:#1f73ae;text-transform:uppercase;letter-spacing:.03em;margin:0}
+.rp-head .rp-sub{font-size:9pt;color:#555;margin-top:2px}
+.rp-head .rp-date{margin-left:auto;text-align:right;font-size:8.5pt;color:#555}
+.rp-filters{display:flex;flex-wrap:wrap;gap:3px 18px;margin:8px 0 10px;font-size:8.5pt;color:#444}
+.rp-filters b{color:#20326e}
+.rp-tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border:1px solid #cfd3d9;border-radius:6px;overflow:hidden;margin-bottom:12px}
+.rp-tiles div{padding:7px 10px;border-right:1px solid #cfd3d9}
+.rp-tiles div:last-child{border-right:0}
+.rp-tiles b{display:block;font-size:14pt;color:#20326e;font-variant-numeric:tabular-nums;line-height:1.15}
+.rp-tiles span{font-size:8pt;color:#6b7280}
+.rp-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start;break-inside:avoid}
+.rp-map{border:1px solid #cfd3d9;border-radius:6px;padding:4px;background:#f8f9f7}
+.rp-map svg{width:100%;height:auto;display:block;max-height:4.1in}
+.rp-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:8pt;color:#444;margin:5px 2px 0}
+.rp-legend span{display:inline-flex;align-items:center;gap:5px}
+.rp h2{font-size:10.5pt;color:#1f73ae;text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px;break-after:avoid}
+.rp-grid h2:first-child,.rp-fund h2:first-child{margin-top:0}
+.rp .pie{grid-template-columns:1.45in 1fr;gap:10px}
+.rp .pie svg{width:1.45in;height:1.45in}
+.rp .pleg{font-size:8pt}
+.rp-fund .fbig{font-size:16pt}
+.rp table.rt{width:100%;border-collapse:collapse;font-size:8.3pt;margin-bottom:6px}
+.rp table.rt thead{display:table-header-group}
+.rp table.rt th{background:#20326e;color:#fff;font-weight:600;text-align:left;padding:4px 6px;font-size:7.8pt;text-transform:uppercase;letter-spacing:.03em}
+.rp table.rt th.n,.rp table.rt td.n{text-align:right;white-space:nowrap}
+.rp table.rt th.n + th,.rp table.rt td.n + td{padding-left:14px}
+.rp table.rt td{padding:4px 6px;border-bottom:1px solid #e6e8eb;vertical-align:top}
+.rp table.rt tr{break-inside:avoid}
+.rp table.rt tbody tr:nth-child(even) td{background:#f6f8fb}
+.rp table.rt td .d{color:#666;font-size:7.6pt;margin-top:1px}
+.rp table.rt td b{color:#20326e}
+.rp table.rt tfoot{display:table-row-group}
+.rp table.rt tfoot td{font-weight:700;color:#20326e;border-top:1.5px solid #20326e;background:#fff}
+.rp .sw{width:8px;height:8px}
+.rp-section{break-before:auto}
+.rp-note{font-size:7.8pt;color:#666;margin-top:10px;border-top:1px solid #e6e8eb;padding-top:6px}
+.rp-detail{display:grid;grid-template-columns:1fr 1fr;gap:4px 22px}
+.rp-detail .dsec{break-inside:avoid}
+.rp-detail > div{break-inside:auto}
+.rp-one{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin-bottom:6px}
+.rp-one .rp-map svg{max-height:3.1in}
+.rp-one .dsec{break-inside:avoid}
+.rp-one dl.kv,.rp-detail dl.kv{font-size:8.6pt}
+.rp-one dl.kv dt,.rp-one dl.kv dd{padding:3px 0}
+.rp-one > div > p{margin:0 0 6px;color:#444}
+.rp .fbig{font-size:15pt;color:#20326e;font-weight:600}
+.rp .tiles{grid-template-columns:repeat(3,1fr)}
+.rp-detail dl.kv{font-size:8.6pt}
+.rp-detail dl.kv dt,.rp-detail dl.kv dd{padding:3px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <a class="logo" href="https://secogct.gov" target="_blank" rel="noopener" aria-label="SECOG home">
+      <img id="logo" alt="Southeastern Connecticut Council of Governments" src="https://secogct.gov/wp-content/uploads/2024/12/secog-full-logo.svg" onerror="this.outerHTML='&lt;span class=&quot;logo-fallback&quot;&gt;SECOG&lt;/span&gt;'">
+    </a>
+    <span class="divider" aria-hidden="true"></span>
+    <div>
+      <h1 id="title" class="cap">Active Transportation Projects</h1>
+      <div class="sub" id="subtitle">CTDOT Capital, LOTCIP and Maintenance Resurfacing projects in the Southeastern Connecticut planning region · live from CTDOT open data</div>
+    </div>
+  </div>
+  <div class="townpick">
+    <span class="tp-label" id="tp-label">Towns</span>
+    <button id="tp-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="tp-panel" aria-labelledby="tp-label tp-text">
+      <span id="tp-text">All towns</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div id="tp-panel" role="dialog" aria-label="Choose towns" hidden>
+      <div class="tp-head"><span id="tp-count"></span><span><button type="button" data-act="all">Select all</button><button type="button" data-act="none">Clear</button></span></div>
+      <div class="tp-list" id="tp-list"></div>
+      <div class="tp-foot"><button type="button" class="btn" data-act="done">Done</button></div>
+    </div>
+  </div>
+</header>
+
+<section class="kpis" aria-label="Summary">
+  <div class="kpi"><div class="v" id="k-pre">–</div><div class="l"><span class="sym poly" style="color:var(--cap-pre)"></span>Capital · pre-construction</div></div>
+  <div class="kpi"><div class="v" id="k-con">–</div><div class="l"><span class="sym poly" style="color:var(--cap-con)"></span>Capital · construction</div></div>
+  <div class="kpi"><div class="v" id="k-capest">–</div><div class="l">Capital total project estimate</div></div>
+  <div class="kpi"><div class="v" id="k-lot">–</div><div class="l"><span class="sym poly" style="color:var(--lotcip)"></span>LOTCIP projects</div></div>
+  <div class="kpi"><div class="v" id="k-lotcost">–</div><div class="l">LOTCIP application cost</div></div>
+  <div class="kpi"><div class="v" id="k-mrp">–</div><div class="l"><span class="sym line" style="color:var(--mrp)"></span>Resurfacing lane-miles</div></div>
+</section>
+
+<main>
+  <aside>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="all" aria-selected="true">All<span class="n" id="n-all"></span></button>
+      <button role="tab" data-tab="capital" aria-selected="false">Capital<span class="n" id="n-capital"></span></button>
+      <button role="tab" data-tab="lotcip" aria-selected="false">LOTCIP<span class="n" id="n-lotcip"></span></button>
+      <button role="tab" data-tab="mrp" aria-selected="false">Paving<span class="n" id="n-mrp"></span></button>
+      <button role="tab" data-tab="funding" aria-selected="false" title="Capital projects in CTDOT's funding-by-source report (PA 24-40)">Funding<span class="n" id="n-funding"></span></button>
+    </div>
+    <div class="filters">
+      <input class="full" type="search" id="q" placeholder="Search project number, title, route, description…" aria-label="Search projects">
+      <select id="phase" class="full" aria-label="Phase or status"><option value="">All phases / statuses</option></select>
+      <div class="row full">
+        <label><input type="checkbox" id="extent" checked> List only what's in map view</label>
+        <label title="Capital projects CTDOT lists under 'Construction (Missing Dates)' or 'Design (Missing Dates)'. The CTDOT viewer hides these."><input type="checkbox" id="missing"> Include capital projects missing schedule dates</label>
+      </div>
+    </div>
+    <div class="listhead"><span id="listcount">Loading…</span><span class="lh-btns"><button id="pdf" class="btn ghost" type="button" title="Print-ready report of the projects listed (choose “Save as PDF” in the print dialog)">PDF report</button><button id="csv" class="btn" type="button">Download CSV</button></span></div>
+    <ul id="list"></ul>
+  </aside>
+  <div class="mapwrap">
+    <div id="map" aria-label="Map of projects"></div>
+    <div id="status" role="status"></div>
+    <section id="detail" aria-label="Project details" hidden></section>
+    <div class="legend">
+      <div class="lt">Projects</div>
+      <div class="r"><span class="sym poly" style="color:var(--cap-pre)"></span>Capital · pre-construction</div>
+      <div class="r"><span class="sym poly" style="color:var(--cap-con)"></span>Capital · construction</div>
+      <div class="r"><span class="sym poly" style="color:var(--lotcip)"></span>LOTCIP</div>
+      <div class="r"><span class="sym line" style="color:var(--mrp)"></span>Resurfacing (MRP)</div>
+    </div>
+  </div>
+</main>
+<div id="tip" role="tooltip"></div>
+<div id="report" aria-hidden="true"></div>
+
+<footer>
+  <span>Southeastern Connecticut Council of Governments · Metropolitan Planning Organization</span>
+  <span>Data: <a href="https://maps-ctdot.hub.arcgis.com/apps/ec4af08e038841fba862db805a9f6c70/explore" target="_blank" rel="noopener">CTDOT Active Projects Viewer</a> and <a href="https://maps-ctdot.hub.arcgis.com/apps/13d67ab4c9e64c17b4011c76704a6cf8/explore" target="_blank" rel="noopener">Active Projects by Funding Sources</a> (PA 24-40; PE, ROW, CN; FY2008–2025 budget data).</span>
+  <span id="refreshed"></span>
+  <span>Project areas are approximate; LOTCIP outlines are not exact limits.</span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7.1.0/turf.min.js"></script>
+<script>
+/* =====================================================================
+   CONFIGURATION — edit here
+   ===================================================================== */
+const CONFIG = {
+  // Planning region this page covers (a PlanningRegion value in CT_Municipalities).
+  // Towns can be pre-selected by URL, e.g. ?towns=Groton,Ledyard
+  region: 'Southeastern Connecticut',
+  logoUrl: 'https://secogct.gov/wp-content/uploads/2024/12/secog-full-logo.svg',
+  base: 'https://services1.arcgis.com/FCaUeJ5SOVtImake/ArcGIS/rest/services/',
+  services: {
+    towns:   'CT_Municipalities/FeatureServer/0',
+    capital: 'CTDOT_Project_Work_Areas/FeatureServer/0',
+    lotcip:  'CTDOT_LOTCIP_Projects/FeatureServer/0',
+    mrp:     'CTDOT_Maintenance_Resurfacing_Program_Active/FeatureServer/0',
+    // PA 24-40 funding report layer (CTDOT Active Projects by Funding Sources). Joined to capital projects by ProjectNumber.
+    funding: 'CTDOT_Active_Projects_Fundings/FeatureServer/0'
+  },
+  // Same active-phase filter the CTDOT viewer uses for Capital Projects.
+  activePhases: ['01_Planning','02_Pre-Design','03_Final-Design','04_Contract-Processing','05_Construction','05_Construction (Pending)'],
+  missingDatePhases: ['Construction (Missing Dates)','Design (Missing Dates)']
+};
+
+/* =====================================================================
+   helpers
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sq = s => "'" + String(s).replace(/'/g, "''") + "'";
+const money = v => v == null || isNaN(v) ? '—' : '$' + Math.round(v).toLocaleString();
+const moneyShort = v => { if (!v) return '$0'; if (v >= 1e9) return '$' + (v/1e9).toFixed(2) + 'B'; if (v >= 1e6) return '$' + (v/1e6).toFixed(1) + 'M'; if (v >= 1e3) return '$' + Math.round(v/1e3) + 'K'; return '$' + Math.round(v); };
+const fdate = v => v ? new Date(v).toLocaleDateString('en-US', {year:'numeric', month:'short', day:'numeric', timeZone:'UTC'}) : '—';
+const titleCase = s => String(s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+const phaseLabel = p => String(p || '').replace(/^\d+_/, '').replace(/-/g, ' ');
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function setStatus(msg, isErr) {
+  const el = $('#status');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.textContent = msg; el.className = isErr ? 'err' : ''; el.style.display = 'block';
+}
+
+// Query a feature layer as GeoJSON, paging past maxRecordCount. Long WHERE clauses go by POST.
+async function queryAll(svc, params) {
+  const url = CONFIG.base + svc + '/query';
+  const out = [];
+  let offset = 0;
+  for (let guard = 0; guard < 50; guard++) {
+    const body = new URLSearchParams(Object.assign({
+      f: 'geojson', outSR: '4326', returnGeometry: 'true', outFields: '*',
+      resultOffset: String(offset), resultRecordCount: '1000', orderByFields: 'OBJECTID'
+    }, params));
+    const r = await fetch(url, {method: 'POST', body});
+    if (!r.ok) throw new Error(svc + ' HTTP ' + r.status);
+    const j = await r.json();
+    if (j.error) throw new Error(svc + ': ' + (j.error.message || 'query failed'));
+    const feats = j.features || [];
+    out.push(...feats);
+    const more = j.exceededTransferLimit || (j.properties && j.properties.exceededTransferLimit);
+    if (!more || !feats.length) break;
+    offset += feats.length;
+  }
+  return out;
+}
+async function queryJSON(svc, params) {
+  const r = await fetch(CONFIG.base + svc + '/query', {method: 'POST', body: new URLSearchParams(Object.assign({f: 'json'}, params))});
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.message);
+  return j;
+}
+
+/* =====================================================================
+   funding schema (CTDOT_Active_Projects_Fundings)
+   ===================================================================== */
+const FUND_PHASES = [
+  {key: 'PE', label: 'Preliminary Engineering', total: 'PETotal'},
+  {key: 'ROW', label: 'Right of Way', total: 'ROWTotal'},
+  {key: 'CN', label: 'Construction', total: 'CNTotal'}
+];
+// field name per phase for each source; level = federal | state | other
+const FUND_SOURCES = [
+  {label: 'FHWA', level: 'federal', f: {PE: 'PEFederalFHWA', ROW: 'ROWFHWA', CN: 'CNFHWA'}, color: '#20326e'},
+  {label: 'FTA', level: 'federal', f: {PE: 'PEFederalFTA', ROW: 'ROWFTA', CN: 'CNFTA'}, color: '#1f73ae'},
+  {label: 'FRA', level: 'federal', f: {PE: 'PEFederalFRA', ROW: 'ROWFRA', CN: 'CNFRA'}, color: '#6fa8d6'},
+  {label: 'Federal (FTA/FHWA/FRA)', level: 'federal', f: {PE: 'PEFedFtaFhwaFra', ROW: 'ROWFtaFhwaFra', CN: 'CNFtaFhwaFra'}, color: '#b3d1ec'},
+  {label: 'State STO Bond', level: 'state', f: {PE: 'PEStateSTOBond', ROW: 'ROWStateSTOBond', CN: 'CNStateSTOBond'}, color: '#3f7f24'},
+  {label: 'State GO Bond', level: 'state', f: {PE: 'PEStateGoBond', ROW: 'ROWStateGoBond', CN: 'CNStateGoBond'}, color: '#76b053'},
+  {label: 'State Revenue Approp.', level: 'state', f: {PE: 'PEStateRevenueApprop', ROW: 'ROWStateRevenueApprop', CN: 'CNStateRevenueApprop'}, color: '#b9d99f'},
+  {label: 'Other', level: 'other', f: {PE: 'PEOther', ROW: 'ROWOther', CN: 'CNOther'}, color: '#9aa0a8'}
+];
+const fv = (a, k) => (a && +a[k]) || 0;
+
+// phase x source matrix for a set of funding rows
+function fundMatrix(rows) {
+  const m = {}; FUND_SOURCES.forEach(s => { m[s.label] = {PE: 0, ROW: 0, CN: 0, total: 0}; });
+  for (const a of rows) for (const s of FUND_SOURCES) for (const p of FUND_PHASES) {
+    const v = fv(a, s.f[p.key]); m[s.label][p.key] += v; m[s.label].total += v;
+  }
+  const phaseTot = {PE: 0, ROW: 0, CN: 0};
+  FUND_SOURCES.forEach(s => FUND_PHASES.forEach(p => { phaseTot[p.key] += m[s.label][p.key]; }));
+  const total = phaseTot.PE + phaseTot.ROW + phaseTot.CN;
+  const level = {federal: 0, state: 0, other: 0};
+  FUND_SOURCES.forEach(s => { level[s.level] += m[s.label].total; });
+  return {m, phaseTot, total, level};
+}
+
+function fundTableHtml(mx, compact) {
+  const srcs = FUND_SOURCES.filter(s => mx.m[s.label].total);
+  if (!srcs.length) return '<p class="muted">No PE, ROW or construction funding recorded.</p>';
+  const cell = v => v ? (compact ? moneyShort(v) : money(v)) : '<span class="muted">–</span>';
+  return `<table class="ftab"><thead><tr><th>Source</th>${FUND_PHASES.map(p => `<th title="${p.label}">${p.key}</th>`).join('')}<th>Total</th></tr></thead><tbody>
+    ${srcs.map(s => `<tr><td><span class="sw" style="background:${s.color}"></span>${esc(s.label)}</td>${FUND_PHASES.map(p => `<td>${cell(mx.m[s.label][p.key])}</td>`).join('')}<td><b>${cell(mx.m[s.label].total)}</b></td></tr>`).join('')}
+    <tr class="tot"><td>Total</td>${FUND_PHASES.map(p => `<td>${cell(mx.phaseTot[p.key])}</td>`).join('')}<td>${cell(mx.total)}</td></tr>
+  </tbody></table>`;
+}
+
+function stackBar(mx) {
+  if (!mx.total) return '';
+  return `<div class="stack" role="img" aria-label="Funding by source">${FUND_SOURCES.filter(s => mx.m[s.label].total).map(s => {
+    const pct = mx.m[s.label].total / mx.total * 100;
+    return `<span style="width:${pct}%;background:${s.color}" title="${esc(s.label)}: ${money(mx.m[s.label].total)} (${pct.toFixed(1)}%)"></span>`;
+  }).join('')}</div>`;
+}
+
+/* =====================================================================
+   pie charts (plain SVG, no library)
+   ===================================================================== */
+// Fiscal year of a timestamp. SFY = Connecticut state FY (Jul–Jun), FFY = federal FY (Oct–Sep).
+function fiscalYear(ts, mode) {
+  if (!ts) return null;
+  const d = new Date(ts), y = d.getUTCFullYear(), m = d.getUTCMonth();
+  if (y < 1990) return null;                       // CTDOT uses 1900-01-01 as a placeholder
+  return mode === 'FFY' ? (m >= 9 ? y + 1 : y) : (m >= 6 ? y + 1 : y);
+}
+// navy → light blue ramp for an ordered set of years
+function yearColors(n) {
+  const a = [32, 50, 110], b = [168, 206, 236];
+  return Array.from({length: n}, (_, i) => {
+    const t = n === 1 ? 0 : i / (n - 1);
+    return 'rgb(' + a.map((v, k) => Math.round(v + (b[k] - v) * t)).join(',') + ')';
+  });
+}
+function pieSvg(slices, label) {
+  const total = slices.reduce((s, x) => s + x.value, 0);
+  if (!total) return '<p class="muted">No funding in the current selection.</p>';
+  const R = 72, C = 75;
+  let a0 = -Math.PI / 2, paths = '';
+  for (const sl of slices) {
+    if (!sl.value) continue;
+    const frac = sl.value / total, a1 = a0 + frac * 2 * Math.PI;
+    const tip = esc(sl.label) + ' · ' + money(sl.value) + ' (' + (frac * 100).toFixed(1) + '%)';
+    if (frac > 0.9999) {
+      paths += `<path d="M${C},${C - R}A${R},${R} 0 1 1 ${C - 0.01},${C - R}Z" fill="${sl.color}" data-tip="${tip}"/>`;
+    } else {
+      const x0 = C + R * Math.cos(a0), y0 = C + R * Math.sin(a0), x1 = C + R * Math.cos(a1), y1 = C + R * Math.sin(a1);
+      paths += `<path d="M${C},${C}L${x0.toFixed(2)},${y0.toFixed(2)}A${R},${R} 0 ${frac > .5 ? 1 : 0} 1 ${x1.toFixed(2)},${y1.toFixed(2)}Z" fill="${sl.color}" data-tip="${tip}"/>`;
+    }
+    a0 = a1;
+  }
+  const legend = slices.filter(s => s.value).map(s => `<li><span class="sw" style="background:${s.color}"></span><span class="lab" title="${esc(s.label)}">${esc(s.label)}</span><span class="v">${moneyShort(s.value)}</span><span class="p">${(s.value / total * 100).toFixed(s.value / total < .01 ? 1 : 0)}%</span></li>`).join('');
+  return `<div class="pie"><svg viewBox="0 0 150 150" role="img" aria-label="${esc(label)}">${paths}</svg><ul class="pleg">${legend}</ul></div>`;
+}
+function sourceSlices(mx) {
+  return FUND_SOURCES.map(s => ({label: s.label, value: mx.m[s.label].total, color: s.color}));
+}
+function yearSlices(recs, mode) {
+  const by = new Map(); let none = 0;
+  for (const r of recs) {
+    const v = fv(r.fund, 'ProjectTotalFunds');
+    const fy = fiscalYear(r.fund.AdvertisedDate || r.a.CurrentADVdate, mode);
+    if (fy == null) none += v; else by.set(fy, (by.get(fy) || 0) + v);
+  }
+  const years = [...by.keys()].sort((a, b) => a - b), cols = yearColors(years.length);
+  const out = years.map((y, i) => ({label: mode + ' ' + y, value: by.get(y), color: cols[i]}));
+  if (none) out.push({label: 'No advertise date', value: none, color: '#c4c8ce'});
+  return out;
+}
+
+/* =====================================================================
+   state
+   ===================================================================== */
+const state = {
+  region: null, towns: [], townGeo: null, records: [],
+  tab: 'all', selectedId: null, includeMissing: false,
+  selTowns: new Set(),     // empty = all towns in the region
+  detailTab: 'overview',   // last-used tab in the project panel
+  yearMode: 'SFY'          // fiscal-year basis for the funding-year pie: 'SFY' or 'FFY'
+};
+
+/* =====================================================================
+   map
+   ===================================================================== */
+const map = L.map('map', {preferCanvas: false, zoomSnap: 0.25}).setView([41.5, -72.1], 10);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 16, attribution: 'Basemap &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
+}).addTo(map);
+const townLayer = L.layerGroup().addTo(map);
+const projLayer = L.featureGroup().addTo(map);
+
+function colorFor(rec) {
+  if (rec.program === 'capital') return rec.group === 'Construction' ? css('--cap-con') : css('--cap-pre');
+  if (rec.program === 'lotcip') return css('--lotcip');
+  return css('--mrp');
+}
+function styleFor(rec, selected) {
+  const c = colorFor(rec);
+  if (rec.program === 'mrp') return {color: c, weight: selected ? 7 : 4, opacity: .95, lineCap: 'round'};
+  // Outline only. fill stays on (opacity 0) so the interior still takes clicks;
+  // smaller polygons are drawn above larger ones, so the smallest wins inside overlaps.
+  return {color: c, weight: selected ? 4 : 2, opacity: selected ? 1 : .9, fill: true, fillColor: c, fillOpacity: 0};
+}
+// polygon area in m² (lines have no area and sort above everything)
+function areaOf(rec) {
+  if (!rec.geom || !/Polygon/.test(rec.geom.type)) return 0;
+  try { return turf.area({type: 'Feature', geometry: rec.geom, properties: {}}); } catch (e) { return rec.a.Shape__Area || 0; }
+}
+
+/* =====================================================================
+   normalisation — one record shape for all three programs
+   ===================================================================== */
+function capitalRecord(f, towns) {
+  const a = f.properties;
+  const pre = !/^05_|^Construction/.test(a.CurrentSchedulePhase || '');
+  return {
+    id: 'C' + a.OBJECTID, program: 'capital', programLabel: 'Capital',
+    number: a.ProjectNumber || a.ProposedProjectNumber || '', title: a.Title || '(untitled)',
+    description: a.ProjectDescription || '', towns, phase: phaseLabel(a.CurrentSchedulePhase),
+    phaseRaw: a.CurrentSchedulePhase, group: pre ? 'Pre-Construction' : 'Construction',
+    cost: a.TotalProjectEstimate, routes: a.StateRoutes || '', scope: a.DistrictID || '',
+    a, geom: f.geometry
+  };
+}
+function lotcipRecord(f) {
+  const a = f.properties;
+  return {
+    id: 'L' + a.OBJECTID, program: 'lotcip', programLabel: 'LOTCIP',
+    number: a.ProjectNo || '', title: a.ProjectDescription || '(untitled)', description: '',
+    towns: [a.MunicipalityDescription].filter(Boolean), phase: a.MapStatus || 'LOTCIP',
+    group: a.PrimaryProjectTypeDescription || '', cost: a.OrigApplTotalCost, routes: '', scope: 'Local',
+    a, geom: f.geometry
+  };
+}
+function mrpRecord(f, regionTowns) {
+  const a = f.properties;
+  const towns = [a.Town1, a.Town2, a.Town3, a.Town4].filter(Boolean).map(titleCase);
+  return {
+    id: 'M' + a.OBJECTID, program: 'mrp', programLabel: 'Resurfacing',
+    number: a.ProjectNumber || '', title: 'Route ' + (a.Route || '?') + (a.Termini ? ' — ' + titleCase(a.Termini) : ''),
+    description: '', towns,
+    phase: a.Phase || '', group: String(a.Year || ''), cost: null, routes: a.Route ? 'Route ' + a.Route : '',
+    laneMiles: a.LaneMiles || 0, scope: 'District ' + (a.District ?? ''), a, geom: f.geometry
+  };
+}
+
+/* =====================================================================
+   load
+   ===================================================================== */
+async function loadRegion(region) {
+  state.region = region;
+  state.records = []; state.selectedId = null;
+  setStatus('Loading towns…');
+
+  // 1. towns in region
+  const townFeats = await queryAll(CONFIG.services.towns, {
+    where: 'PlanningRegion = ' + sq(region), outFields: 'Municipality,PlanningRegion,CouncilOfGovernment,MetropolitanPlanningOrg',
+    maxAllowableOffset: '0.0002', geometryPrecision: '5'
+  });
+  if (!townFeats.length) throw new Error('No towns found for region "' + region + '"');
+  state.towns = townFeats.map(f => f.properties.Municipality).sort();
+  state.townGeo = {type: 'FeatureCollection', features: townFeats};
+  const upperTowns = state.towns.map(t => t.toUpperCase());
+
+  townLayer.clearLayers();
+  const outline = L.geoJSON(state.townGeo, {
+    style: {color: css('--navy') || '#20326e', weight: 1.2, opacity: .45, fill: false, dashArray: '4 4'},
+    interactive: false
+  });
+  outline.eachLayer(l => {
+    l.bindTooltip(l.feature.properties.Municipality, {permanent: true, direction: 'center', className: 'town-label'});
+  });
+  townLayer.addLayer(outline);
+  map.fitBounds(outline.getBounds(), {padding: [10, 10]});
+
+  // keep only URL-requested towns that exist, then build the picker
+  state.selTowns = new Set([...state.selTowns].filter(t => state.towns.includes(t)));
+  buildTownPicker();
+  styleTowns(!state.selTowns.size);
+
+  // 2. capital: attribute match on Towns, plus a spatial check for records with no town list
+  setStatus('Loading capital projects…');
+  const phases = CONFIG.activePhases.concat(CONFIG.missingDatePhases);
+  const phaseWhere = 'CurrentSchedulePhase IN (' + phases.map(sq).join(',') + ')';
+  const townWhere = '(' + state.towns.map(t => 'Towns LIKE ' + sq('%' + t + '%')).join(' OR ') + ')';
+  const [capByTown, capNoTown] = await Promise.all([
+    queryAll(CONFIG.services.capital, {where: phaseWhere + ' AND ' + townWhere, geometryPrecision: '6'}),
+    queryAll(CONFIG.services.capital, {where: phaseWhere + " AND (Towns IS NULL OR Towns = '')", geometryPrecision: '6'})
+  ]);
+  const caps = [];
+  for (const f of capByTown) {
+    const list = String(f.properties.Towns || '').split(',').map(s => s.trim());
+    const hit = list.filter(t => state.towns.includes(t));       // exact match, guards against partial-name LIKE hits
+    if (hit.length) caps.push(capitalRecord(f, hit));
+  }
+  // Test each town part separately with a bbox pre-check. Generalisation leaves tiny
+  // degenerate island slivers (Groton, Stonington) that make turf report false intersections.
+  const boxHit = (a, b) => a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+  const townParts = townFeats.map(t => turf.flatten(t).features
+    .filter(p => { try { return turf.area(p) > 5000; } catch (e) { return false; } })
+    .map(p => ({p, box: turf.bbox(p)})));
+  for (const f of capNoTown) {
+    if (!f.geometry) continue;
+    const fb = turf.bbox(f);
+    const hit = townFeats.filter((t, i) => townParts[i].some(({p, box}) => {
+      if (!boxHit(fb, box)) return false;
+      try { return turf.booleanIntersects(f, p); } catch (e) { return false; }
+    })).map(t => t.properties.Municipality);
+    if (hit.length) caps.push(capitalRecord(f, hit));
+  }
+
+  // 3. LOTCIP by municipality
+  setStatus('Loading LOTCIP projects…');
+  const lot = await queryAll(CONFIG.services.lotcip, {
+    where: 'MunicipalityDescription IN (' + state.towns.map(sq).join(',') + ')', geometryPrecision: '6'
+  });
+
+  // 4. MRP by town fields (upper-case in source)
+  setStatus('Loading resurfacing projects…');
+  const tIn = '(' + upperTowns.map(sq).join(',') + ')';
+  const mrp = await queryAll(CONFIG.services.mrp, {
+    where: `UPPER(Town1) IN ${tIn} OR UPPER(Town2) IN ${tIn} OR UPPER(Town3) IN ${tIn} OR UPPER(Town4) IN ${tIn}`,
+    geometryPrecision: '6'
+  });
+
+  // 5. funding by source (PA 24-40 layer), joined on ProjectNumber. Non-fatal if unavailable.
+  setStatus('Loading funding sources…');
+  try {
+    const nums = [...new Set(caps.map(r => r.a.ProjectNumber).filter(Boolean))];
+    const fundRows = [];
+    for (let i = 0; i < nums.length; i += 200) {
+      const j = await queryJSON(CONFIG.services.funding, {
+        where: 'ProjectNumber IN (' + nums.slice(i, i + 200).map(sq).join(',') + ')',
+        outFields: '*', returnGeometry: 'false', resultRecordCount: '2000'
+      });
+      fundRows.push(...j.features.map(f => f.attributes));
+    }
+    const byNum = new Map(fundRows.map(a => [a.ProjectNumber, a]));
+    caps.forEach(r => { r.fund = byNum.get(r.a.ProjectNumber) || null; });
+    state.fundingOK = true;
+  } catch (e) { console.warn('Funding layer unavailable', e); state.fundingOK = false; }
+
+  state.records = caps.concat(lot.map(lotcipRecord), mrp.map(f => mrpRecord(f, state.towns)));
+  state.records.forEach(r => { r.towns = r.towns.filter(t => state.towns.includes(t)).length ? r.towns.filter(t => state.towns.includes(t)) : r.towns; });
+
+  buildLayers();
+  rebuildPhaseOptions();
+  render();
+  setStatus('');
+  loadRefreshDate();
+}
+
+async function loadRefreshDate() {
+  try {
+    const dates = await Promise.all(['capital', 'lotcip', 'mrp', 'funding'].map(async k => {
+      const j = await fetch(CONFIG.base + CONFIG.services[k] + '?f=json').then(r => r.json());
+      return j.editingInfo && (j.editingInfo.dataLastEditDate || j.editingInfo.lastEditDate);
+    }));
+    const d = Math.max(...dates.filter(Boolean));
+    if (isFinite(d)) $('#refreshed').textContent = 'CTDOT data last updated ' + fdate(d) + '.';
+  } catch (e) { /* non-essential */ }
+}
+
+/* =====================================================================
+   layers
+   ===================================================================== */
+const layerById = new Map();
+function buildLayers() {
+  projLayer.clearLayers(); layerById.clear();
+  // Draw order: largest polygon first, smallest last (on top); resurfacing lines above all polygons.
+  state.records.forEach(r => { r.area = areaOf(r); });
+  const sorted = state.records.filter(r => r.geom).sort((a, b) => b.area - a.area);
+  state.drawOrder = sorted.map(r => r.id);
+  for (const rec of sorted) {
+    const lyr = L.geoJSON({type: 'Feature', geometry: rec.geom, properties: {}}, {style: () => styleFor(rec, false), bubblingMouseEvents: false});
+    lyr.on('click', () => select(rec.id, false));
+    lyr.bindTooltip(esc(rec.number ? rec.number + ' · ' : '') + esc(rec.title), {sticky: true, direction: 'top', opacity: .95});
+    rec.bounds = lyr.getBounds();
+    layerById.set(rec.id, lyr);
+  }
+}
+
+/* =====================================================================
+   filtering + rendering
+   ===================================================================== */
+function phaseOptionsFor(tab) {
+  const recs = state.records.filter(r => tab === 'all' || r.program === tab);
+  if (tab === 'all') return [['grp:Pre-Construction', 'Capital · Pre-Construction'], ['grp:Construction', 'Capital · Construction']];
+  if (tab === 'lotcip') return [...new Set(recs.map(r => r.group).filter(Boolean))].sort().map(v => ['grp:' + v, v]);
+  if (tab === 'funding') return phaseOptionsFor('capital');
+  const order = CONFIG.activePhases.concat(CONFIG.missingDatePhases).map(phaseLabel);
+  const set = [...new Set(recs.map(r => r.phase).filter(Boolean))];
+  set.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99) || a.localeCompare(b));
+  const opts = set.map(v => ['ph:' + v, v]);
+  if (tab === 'capital') opts.unshift(['grp:Pre-Construction', 'All pre-construction'], ['grp:Construction', 'All construction']);
+  return opts;
+}
+function rebuildPhaseOptions() {
+  const sel = $('#phase'), cur = sel.value;
+  const label = state.tab === 'lotcip' ? 'All project types' : 'All phases / statuses';
+  const opts = phaseOptionsFor(state.tab);
+  sel.innerHTML = `<option value="">${label}</option>` + opts.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('');
+  if (opts.some(o => o[0] === cur)) sel.value = cur;
+}
+
+function baseFiltered() {
+  const q = $('#q').value.trim().toLowerCase();
+  const phase = $('#phase').value, sel = state.selTowns;
+  return state.records.filter(r => {
+    if (r.program === 'capital' && !state.includeMissing && CONFIG.missingDatePhases.includes(r.phaseRaw)) return false;
+    if (sel.size && !r.towns.some(t => sel.has(t))) return false;
+    if (phase) {
+      const [k, v] = [phase.slice(0, phase.indexOf(':')), phase.slice(phase.indexOf(':') + 1)];
+      if (k === 'grp' && state.tab === 'all' && (r.program !== 'capital' || r.group !== v)) return false;
+      if (k === 'grp' && state.tab !== 'all' && r.group !== v) return false;
+      if (k === 'ph' && r.phase !== v) return false;
+    }
+    if (q) {
+      const hay = [r.number, r.title, r.description, r.routes, r.towns.join(' '), r.phase, r.a.ProposedProjectNumber, r.a.Contractor].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function render() {
+  const pre = baseFiltered();                         // filters except tab + extent
+  const prog = state.tab === 'funding' ? 'capital' : state.tab;
+  const inTab = pre.filter(r => state.tab === 'all' || r.program === prog);
+
+  // map shows everything matching filters for the current tab
+  projLayer.clearLayers();
+  const show = new Map(inTab.map(r => [r.id, r]));
+  for (const id of state.drawOrder || []) {        // largest first → smallest ends up on top
+    const r = show.get(id), l = r && layerById.get(id);
+    if (l) { l.setStyle(styleFor(r, id === state.selectedId)); projLayer.addLayer(l); }
+  }
+  // the selected outline is drawn thicker but keeps its place in the size order, so smaller
+  // features inside it stay clickable
+
+  // tab counts and KPIs follow the filters (not the map extent)
+  const byProg = p => pre.filter(r => r.program === p);
+  $('#n-all').textContent = pre.length;
+  $('#n-capital').textContent = byProg('capital').length;
+  $('#n-lotcip').textContent = byProg('lotcip').length;
+  $('#n-mrp').textContent = byProg('mrp').length;
+  $('#n-funding').textContent = state.fundingOK ? byProg('capital').filter(r => r.fund).length : '';
+  const cap = byProg('capital');
+  $('#k-pre').textContent = cap.filter(r => r.group === 'Pre-Construction').length;
+  $('#k-con').textContent = cap.filter(r => r.group === 'Construction').length;
+  $('#k-capest').textContent = moneyShort(cap.reduce((s, r) => s + (r.cost || 0), 0));
+  const lot = byProg('lotcip');
+  $('#k-lot').textContent = lot.length;
+  $('#k-lotcost').textContent = moneyShort(lot.reduce((s, r) => s + (r.cost || 0), 0));
+  $('#k-mrp').textContent = byProg('mrp').reduce((s, r) => s + (r.laneMiles || 0), 0).toFixed(1);
+
+  // list: tab + optional extent
+  const mb = map.getBounds();
+  let list = inTab;
+  if ($('#extent').checked) list = list.filter(r => !r.bounds || !r.bounds.isValid() || mb.intersects(r.bounds));
+  list.sort((a, b) => ({capital: 0, lotcip: 1, mrp: 2}[a.program] - {capital: 0, lotcip: 1, mrp: 2}[b.program]) || String(a.number).localeCompare(String(b.number)));
+  state.visible = list;
+  state.inTabCount = inTab.length;
+
+  $('#listcount').textContent = list.length + ' of ' + inTab.length + ' project' + (inTab.length === 1 ? '' : 's') + ($('#extent').checked && list.length < inTab.length ? ' in view' : '');
+  const ul = $('#list');
+  if (state.tab === 'funding') { renderFunding(list, ul); return; }
+  if (!list.length) {
+    ul.innerHTML = `<li class="empty">${inTab.length ? 'No projects in the current map view. Zoom out or untick “List only what’s in map view”.' : 'No projects match these filters.'}</li>`;
+    return;
+  }
+  ul.innerHTML = list.map(r => `
+    <li data-id="${r.id}" class="${r.id === state.selectedId ? 'sel' : ''}" style="border-left-color:${colorFor(r)}">
+      <div class="t">${esc(r.title)}</div>
+      <div class="m">
+        <span class="pn">${esc(r.number)}</span>
+        <span class="chip">${esc(r.programLabel)}${r.program === 'capital' ? ' · ' + esc(r.phase) : r.program === 'mrp' ? ' · ' + esc(r.phase) : ''}</span>
+        <span>${esc(r.towns.slice(0, 4).join(', '))}${r.towns.length > 4 ? ' +' + (r.towns.length - 4) : ''}</span>
+        ${r.cost ? `<span>${moneyShort(r.cost)}</span>` : ''}
+        ${r.program === 'mrp' && r.laneMiles ? `<span>${r.laneMiles} lane-mi</span>` : ''}
+      </div>
+    </li>`).join('');
+}
+
+function renderFunding(list, ul) {
+  if (!state.fundingOK) { ul.innerHTML = '<li class="empty">CTDOT’s funding-by-source layer could not be loaded.</li>'; return; }
+  const funded = list.filter(r => r.fund);
+  const mx = fundMatrix(funded.map(r => r.fund));
+  const pct = v => !mx.total || !v ? '0%' : v / mx.total < .01 ? '<1%' : (v / mx.total * 100).toFixed(0) + '%';
+  $('#listcount').textContent = funded.length + ' of ' + list.length + ' capital project' + (list.length === 1 ? ' has' : 's have') + ' funding data' + ($('#extent').checked ? ' (in view)' : '');
+  const ym = state.yearMode;
+  const summary = `<li class="fsum">
+      <h2 class="cap">Total funding</h2>
+      <div class="fbig">${money(mx.total)}</div>
+      <div class="note">PE, ROW and construction funding, FY2008–2025 budget data</div>
+      <div class="flev">
+        <div style="border-color:#1f73ae"><b>${moneyShort(mx.level.federal)}</b><span>Federal · ${pct(mx.level.federal)}</span></div>
+        <div style="border-color:#76b053"><b>${moneyShort(mx.level.state)}</b><span>State · ${pct(mx.level.state)}</span></div>
+        <div style="border-color:#9aa0a8"><b>${moneyShort(mx.level.other)}</b><span>Other · ${pct(mx.level.other)}</span></div>
+      </div>
+      <h2 class="cap">Dollars by funding source</h2>
+      ${pieSvg(sourceSlices(mx), 'Funding by source')}
+      <h2 class="cap">Dollars by funding year
+        <span class="seg" role="group" aria-label="Fiscal year basis">
+          <button type="button" data-ym="SFY" aria-pressed="${ym === 'SFY'}" title="Connecticut state fiscal year, July–June">State FY</button>
+          <button type="button" data-ym="FFY" aria-pressed="${ym === 'FFY'}" title="Federal fiscal year, October–September">Federal FY</button>
+        </span></h2>
+      ${pieSvg(yearSlices(funded, ym), 'Funding by year')}
+      <div class="note">CTDOT reports one funding total per project, not annual amounts. Each project’s dollars are placed in the ${ym === 'FFY' ? 'federal' : 'state'} fiscal year of its advertise (letting) date.</div>
+      <h2 class="cap">By source and phase</h2>
+      ${fundTableHtml(mx, true)}
+    </li>`;
+  const rows = funded.slice().sort((a, b) => fv(b.fund, 'ProjectTotalFunds') - fv(a.fund, 'ProjectTotalFunds')).map(r => {
+    const f = r.fund, t = fv(f, 'ProjectTotalFunds') || 1;
+    const seg = (v, c) => v ? `<span style="width:${v / t * 100}%;background:${c}"></span>` : '';
+    return `<li data-id="${r.id}" class="${r.id === state.selectedId ? 'sel' : ''}" style="border-left-color:${colorFor(r)}">
+      <div class="t">${esc(r.title)}</div>
+      <div class="m"><span class="pn">${esc(r.number)}</span><span class="chip">${esc(r.phase)}</span>
+        <span>${esc(r.towns.slice(0, 3).join(', '))}${r.towns.length > 3 ? ' +' + (r.towns.length - 3) : ''}</span>
+        <span><b>${moneyShort(fv(f, 'ProjectTotalFunds'))}</b> · Fed ${moneyShort(fv(f, 'FederalTotalFunds'))} / State ${moneyShort(fv(f, 'StateTotalFunds'))}</span>
+        ${fiscalYear(f.AdvertisedDate || r.a.CurrentADVdate, state.yearMode) ? `<span>${state.yearMode} ${fiscalYear(f.AdvertisedDate || r.a.CurrentADVdate, state.yearMode)}</span>` : ''}</div>
+      <div class="stack thin">${seg(fv(f, 'FederalTotalFunds'), '#1f73ae')}${seg(fv(f, 'StateTotalFunds'), '#76b053')}${seg(fv(f, 'OtherTotalFunds'), '#9aa0a8')}</div>
+    </li>`;
+  }).join('');
+  ul.innerHTML = summary + (rows || '<li class="empty">No capital projects with funding data match these filters.</li>');
+}
+
+/* =====================================================================
+   project detail panel (docked right, tabbed)
+   ===================================================================== */
+const DETAIL_TABS = {
+  capital: [['overview', 'Overview'], ['schedule', 'Schedule & cost'], ['funding', 'Funding'], ['team', 'Team']],
+  lotcip:  [['overview', 'Overview']],
+  mrp:     [['overview', 'Overview'], ['schedule', 'Schedule']]
+};
+const pctOf = (v, t) => t ? Math.max(0, Math.min(100, v / t * 100)) : 0;
+// definition list from [label, html] pairs; empty values are skipped
+function kv(pairs) {
+  const rows = pairs.filter(([, v]) => v != null && v !== '' && v !== '—');
+  return rows.length ? `<dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>` : '';
+}
+const sec = (title, body) => body ? `<div class="dsec"><h3>${esc(title)}</h3>${body}</div>` : '';
+const d = v => v ? fdate(v) : '';
+const m = v => v != null && v !== '' ? money(v) : '';
+const tx = v => v != null && v !== '' ? esc(v) : '';
+
+function detailBody(r, tab) {
+  const a = r.a;
+  if (r.program === 'capital') {
+    if (tab === 'overview') {
+      const others = String(a.Towns || '').split(',').map(s => s.trim()).filter(t => t && !r.towns.includes(t));
+      const routes = String(a.StateRoutes || '');
+      const dp = a.DesignPercentComplete;
+      return (r.description ? `<p>${esc(r.description)}</p>` : '') +
+        sec('Status', kv([
+          ['Phase', `${esc(r.phase)} <span class="chip">${esc(r.group)}</span>`],
+          ['Design complete', dp != null ? `<div class="meter"><span style="width:${pctOf(dp, 100)}%"></span></div><div class="meter-l"><span>${dp}%</span></div>` : ''],
+          ['STIP status', tx(a.STIPstatusDescription)],
+          ['Scope', tx(a.DistrictID)],
+          ['Proposed project #', tx(a.ProposedProjectNumber)]
+        ])) +
+        sec('Location', kv([
+          ['Towns in region', esc(r.towns.join(', '))],
+          ['Other towns', others.length ? esc(others.join(', ')) : ''],
+          ['Construction district', tx(a.ConstructionDistrict)],
+          ['Bridges', tx(a.Bridges)],
+          ['Traffic signals', tx(a.TrafficSignals)]
+        ]) + (routes ? `<div class="dsec"><h3>Routes</h3><div class="routes">${esc(routes)}</div></div>` : ''));
+    }
+    if (tab === 'schedule') {
+      const est = a.TotalProjectEstimate || 0;
+      const spent = (a.PEexpenditures || 0) + (a.ROWExpenditures || 0) + (a.ConstructionExpenditures || 0);
+      return sec('Schedule', kv([
+          ['Advertise date', d(a.CurrentADVdate)],
+          ['Advertise fiscal year', fiscalYear(a.CurrentADVdate, 'SFY') ? `SFY ${fiscalYear(a.CurrentADVdate, 'SFY')} · FFY ${fiscalYear(a.CurrentADVdate, 'FFY')}` : ''],
+          ['Est. construction completion', d(a.EstConstrCompletionDate)],
+          ['Construction completed', d(a.ConstructionCompletionDate)]
+        ]) || '<p class="muted">No schedule dates recorded.</p>') +
+        sec('Cost', kv([
+          ['Total project estimate', m(a.TotalProjectEstimate)],
+          ['Construction estimate', m(a.CurrentConstructionEstimate)]
+        ])) +
+        sec('Spent to date', (est ? `<div class="meter"><span style="width:${pctOf(spent, est)}%"></span></div><div class="meter-l"><span>${money(spent)} spent</span><span>${Math.round(pctOf(spent, est))}% of estimate</span></div>` : '') +
+          kv([['Preliminary engineering', m(a.PEexpenditures)], ['Right of way', m(a.ROWExpenditures)], ['Construction', m(a.ConstructionExpenditures)]]));
+    }
+    if (tab === 'funding') {
+      if (!r.fund) return `<p class="muted">${state.fundingOK ? 'This project is not in CTDOT’s funding-by-source report.' : 'CTDOT’s funding layer could not be loaded.'}</p>`;
+      const mx = fundMatrix([r.fund]);
+      const adv = r.fund.AdvertisedDate || a.CurrentADVdate;
+      return `<div class="fbig">${money(mx.total)}</div><div class="note muted" style="font-size:12px;margin-bottom:10px">PE, ROW and construction funding, FY2008–2025 budget data</div>
+        <div class="tiles"><div style="border-color:#1f73ae"><b>${moneyShort(mx.level.federal)}</b><span>Federal</span></div><div style="border-color:#76b053"><b>${moneyShort(mx.level.state)}</b><span>State</span></div><div style="border-color:#9aa0a8"><b>${moneyShort(mx.level.other)}</b><span>Other</span></div></div>
+        ${stackBar(mx)}${sec('By source and phase', fundTableHtml(mx, true))}
+        ${sec('Funding year basis', kv([['Advertise date', d(adv)], ['State fiscal year', fiscalYear(adv, 'SFY') ? 'SFY ' + fiscalYear(adv, 'SFY') : ''], ['Federal fiscal year', fiscalYear(adv, 'FFY') ? 'FFY ' + fiscalYear(adv, 'FFY') : '']]))}`;
+    }
+    if (tab === 'team') {
+      const pm = a.ProjectManager ? esc(a.ProjectManager) + (a.ProjectManagerEmail ? `<br><a href="mailto:${esc(a.ProjectManagerEmail)}">${esc(a.ProjectManagerEmail)}</a>` : '') : '';
+      return sec('CTDOT', kv([['Project manager', pm], ['Lead engineer', tx(a.ProjectLeadEngineer)], ['Primary designer', tx(a.PrimaryDesigner)], ['Primary inspector', tx(a.PrimaryInspector)]])) +
+        sec('Consultants & contractors', kv([['Consultant engineer', tx(a.ConsultantEngineer)], ['Contractor', tx(a.Contractor)]])) +
+        sec('Oversight', kv([['FHWA oversight', tx(a.FHWAoversight)], ['Financial phases', tx(a.FinancialPhases)]])) ||
+        '<p class="muted">No team information recorded.</p>';
+    }
+  }
+  if (r.program === 'lotcip') {
+    return sec('Project', kv([
+      ['Municipality', tx(a.MunicipalityDescription)], ['Project type', tx(a.PrimaryProjectTypeDescription)],
+      ['Status', tx(a.MapStatus)], ['Original application cost', m(a.OrigApplTotalCost)],
+      ['Council of governments', tx(a.COGDescription)], ['Contact', tx(a.Contact)]
+    ])) + '<p class="muted" style="font-size:12px">LOTCIP outlines are approximate project areas, not exact limits.</p>';
+  }
+  // resurfacing (MRP)
+  if (tab === 'schedule') {
+    return sec('Work progress', kv([
+      ['Pre-construction meeting', d(a.PreConstructionMeetingDate)],
+      ['Prep work', [d(a.PrepWorkStarted), d(a.PrepWorkCompleted)].filter(Boolean).join(' → ')],
+      ['Paving (machine laid)', [d(a.MachineLaidStarted), d(a.MachineLaidCompleted)].filter(Boolean).join(' → ')],
+      ['Handwork', [d(a.HandworkStarted), d(a.HandworkCompleted)].filter(Boolean).join(' → ')],
+      ['Incidentals', [d(a.IncidentialsStarted), d(a.IncidentialsCompleted)].filter(Boolean).join(' → ')]
+    ]) || '<p class="muted">No work dates recorded yet.</p>') +
+      sec('Contractors', kv([['Contractor', tx(a.Contractor)], ['Subcontractor', tx(a.SubContractor)]])) +
+      sec('Record', kv([['Last updated', d(a.DateOfLastUpdate)], ['Remarks', tx(a.Remarks)]]));
+  }
+  return sec('Status', kv([['Status', tx(a.Phase)], ['Program year', tx(a.Year)], ['Canceled', a.Canceled === 'Yes' ? 'Yes' : '']])) +
+    sec('Location', kv([
+      ['Towns', esc(r.towns.join(', '))], ['Route', tx(a.Route) + (a.Direction ? ' ' + esc(a.Direction) : '')],
+      ['Limits', tx(titleCase(a.Termini))], ['Mile points', a.BeginMilePoint != null ? a.BeginMilePoint + ' – ' + a.EndMilePoint : '']
+    ])) +
+    sec('Pavement', kv([
+      ['Lane-miles', tx(a.LaneMiles)], ['Material', tx(a.ClassOfMaterial)], ['Depth', tx(a.Depth)],
+      ['Average daily traffic', a.AverageDailyTraffic ? Number(a.AverageDailyTraffic).toLocaleString() : '']
+    ]));
+}
+
+const ICON = {
+  zoom: '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14M5 7h4M7 5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  print: '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6V2h8v4M4 12H2.5V6.5h11V12H12M4 9.5h8V14H4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  close: '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>'
+};
+function renderDetail() {
+  const el = $('#detail');
+  const r = state.records.find(x => x.id === state.selectedId);
+  if (!r) { el.hidden = true; el.innerHTML = ''; return; }
+  const tabs = DETAIL_TABS[r.program];
+  const tab = tabs.some(t => t[0] === state.detailTab) ? state.detailTab : 'overview';
+  const status = r.program === 'capital' ? r.phase : r.program === 'mrp' ? r.phase : (r.group || 'LOTCIP');
+  el.style.setProperty('--dc', colorFor(r));
+  el.innerHTML = `
+    <div class="d-head">
+      <div class="d-top"><span class="chip">${esc(r.programLabel)} · ${esc(status)}</span>
+        <span class="d-actions">
+          <button type="button" data-act="zoom" title="Zoom to project" aria-label="Zoom to project">${ICON.zoom}</button>
+          <button type="button" data-act="print" title="Print this project (PDF)" aria-label="Print this project">${ICON.print}</button>
+          <button type="button" data-act="close" title="Close" aria-label="Close project details">${ICON.close}</button>
+        </span></div>
+      <h2 id="d-title">${esc(r.title)}</h2>
+      <div class="d-num">${esc(r.number)}${r.towns.length ? ' · ' + esc(r.towns.slice(0, 3).join(', ')) + (r.towns.length > 3 ? ' +' + (r.towns.length - 3) : '') : ''}</div>
+    </div>
+    ${tabs.length > 1 ? `<div class="d-tabs" role="tablist" aria-labelledby="d-title">${tabs.map(([k, l]) =>
+      `<button type="button" role="tab" data-dtab="${k}" aria-selected="${k === tab}">${l}</button>`).join('')}</div>` : ''}
+    <div class="d-body" role="tabpanel">${detailBody(r, tab)}</div>`;
+  el.hidden = false;
+}
+function panelPad() {
+  const open = !$('#detail').hidden && innerWidth > 900;
+  return {paddingTopLeft: [50, 50], paddingBottomRight: [open ? $('#detail').offsetWidth + 40 : 50, 50]};
+}
+function zoomTo(rec) {
+  if (rec && rec.bounds && rec.bounds.isValid()) map.fitBounds(rec.bounds, Object.assign({maxZoom: 15}, panelPad()));
+}
+function select(id, zoom) {
+  const rec = state.records.find(r => r.id === id);
+  if (!rec || !layerById.get(id)) return;
+  state.selectedId = id;
+  renderDetail();
+  if (zoom) zoomTo(rec);
+  render();
+  const li = document.querySelector(`#list li[data-id="${id}"]`);
+  if (li) li.scrollIntoView({block: 'nearest'});
+}
+function closeDetail() { state.selectedId = null; renderDetail(); render(); }
+$('#detail').addEventListener('click', e => {
+  const t = e.target.closest('[data-dtab]');
+  if (t) { state.detailTab = t.dataset.dtab; renderDetail(); return; }
+  const act = e.target.closest('[data-act]'); if (!act) return;
+  const rec = state.records.find(r => r.id === state.selectedId);
+  if (act.dataset.act === 'close') closeDetail();
+  else if (act.dataset.act === 'zoom') zoomTo(rec);
+  else if (act.dataset.act === 'print' && rec) printReport([rec], true);
+});
+L.DomEvent.disableClickPropagation($('#detail'));
+L.DomEvent.disableScrollPropagation($('#detail'));
+map.on('click', () => { if (state.selectedId) closeDetail(); });
+
+/* =====================================================================
+   PDF report (browser print → "Save as PDF")
+   ===================================================================== */
+// simple equirectangular SVG map of the shown towns and projects
+function reportMapSvg(recs, focus) {
+  const sel = state.selTowns;
+  let towns = state.townGeo.features.filter(f => !sel.size || sel.has(f.properties.Municipality));
+  let bb = turf.bbox({type: 'FeatureCollection', features: towns}), pad = (bb[2] - bb[0]) * 0.02;
+  if (focus && focus.geom) {
+    // single project: frame the project with some surrounding context, all region towns as backdrop
+    towns = state.townGeo.features;
+    const fb = turf.bbox({type: 'Feature', geometry: focus.geom, properties: {}});
+    const cx = (fb[0] + fb[2]) / 2, cy = (fb[1] + fb[3]) / 2;
+    const hw = Math.max((fb[2] - fb[0]) * 1.4, 0.035), hh = Math.max((fb[3] - fb[1]) * 1.4, 0.025);
+    bb = [cx - hw, cy - hh, cx + hw, cy + hh]; pad = 0;
+  }
+  const minX = bb[0] - pad, maxX = bb[2] + pad, minY = bb[1] - pad, maxY = bb[3] + pad;
+  const kx = Math.cos((minY + maxY) / 2 * Math.PI / 180), W = 1000, S = W / ((maxX - minX) * kx), H = Math.round((maxY - minY) * S);
+  const pt = ([x, y]) => ((x - minX) * kx * S).toFixed(1) + ',' + ((maxY - y) * S).toFixed(1);
+  const ring = r => 'M' + r.map(pt).join('L');
+  const pathOf = g => !g ? '' :
+    g.type === 'Polygon' ? g.coordinates.map(r => ring(r) + 'Z').join('') :
+    g.type === 'MultiPolygon' ? g.coordinates.map(p => p.map(r => ring(r) + 'Z').join('')).join('') :
+    g.type === 'LineString' ? ring(g.coordinates) :
+    g.type === 'MultiLineString' ? g.coordinates.map(ring).join('') : '';
+  const fs = Math.max(9, Math.round(W / 70));
+  const townPaths = towns.map(t => `<path d="${pathOf(t.geometry)}" fill="#fff" stroke="#20326e" stroke-opacity=".45" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-width="1"/>`).join('');
+  const labels = towns.map(t => { let c; try { c = turf.pointOnFeature(t).geometry.coordinates; } catch (e) { return ''; }
+    const [x, y] = pt(c).split(','); return `<text x="${x}" y="${y}" text-anchor="middle" font-size="${fs}" font-weight="600" fill="#20326e" fill-opacity=".55" letter-spacing=".5">${esc(t.properties.Municipality.toUpperCase())}</text>`; }).join('');
+  const order = new Map((state.drawOrder || []).map((id, i) => [id, i]));
+  const projPaths = recs.slice().sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)).map(r => {
+    const line = r.program === 'mrp';
+    return `<path d="${pathOf(r.geom)}" fill="none" stroke="${colorFor(r)}" stroke-width="${line ? 3 : 1.6}" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Map of projects">${townPaths}${labels}${projPaths}</svg>`;
+}
+
+function reportFilters(recs) {
+  const n = state.selTowns.size;
+  const tabName = {all: 'All projects', capital: 'Capital projects', lotcip: 'LOTCIP projects', mrp: 'Resurfacing (MRP)', funding: 'Capital funding'}[state.tab];
+  const phase = $('#phase').value ? $('#phase').selectedOptions[0].textContent : '';
+  const items = [
+    ['Towns', n ? [...state.selTowns].sort().join(', ') : `All ${state.towns.length} towns`],
+    ['View', tabName],
+    phase && ['Phase / type', phase],
+    $('#q').value.trim() && ['Search', '“' + $('#q').value.trim() + '”'],
+    $('#extent').checked && state.inTabCount > recs.length && ['Map view', `limited to the current map view (${recs.length} of ${state.inTabCount})`],
+    state.includeMissing && ['Missing dates', 'included']
+  ].filter(Boolean);
+  return `<div class="rp-filters">${items.map(([k, v]) => `<span><b>${esc(k)}:</b> ${esc(v)}</span>`).join('')}</div>`;
+}
+
+function reportTables(recs) {
+  const cap = recs.filter(r => r.program === 'capital'), lot = recs.filter(r => r.program === 'lotcip'), mrp = recs.filter(r => r.program === 'mrp');
+  const trunc = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+  let html = '';
+  if (cap.length) {
+    const est = cap.reduce((s, r) => s + (r.cost || 0), 0), fund = cap.reduce((s, r) => s + fv(r.fund, 'ProjectTotalFunds'), 0);
+    html += `<div class="rp-section"><h2>Capital projects (${cap.length})</h2><table class="rt"><thead><tr>
+      <th style="width:8%">Project</th><th>Title &amp; description</th><th style="width:13%">Towns</th><th style="width:10%">Phase</th>
+      <th class="n" style="width:8%">Advertise</th><th class="n" style="width:8%">Est. complete</th><th class="n" style="width:8%">Estimate</th><th class="n" style="width:12%">Funding (fed / state)</th></tr></thead><tbody>
+      ${cap.map(r => `<tr><td><b>${esc(r.number)}</b></td><td><b>${esc(r.title)}</b>${r.description ? `<div class="d">${esc(trunc(r.description, 230))}</div>` : ''}</td>
+        <td>${esc(r.towns.join(', '))}</td><td>${esc(r.phase)}</td>
+        <td class="n">${(r.a.CurrentADVdate || (r.fund && r.fund.AdvertisedDate)) ? fdate(r.a.CurrentADVdate || r.fund.AdvertisedDate) : '—'}</td><td class="n">${r.a.EstConstrCompletionDate ? fdate(r.a.EstConstrCompletionDate) : '—'}</td>
+        <td class="n">${r.cost ? moneyShort(r.cost) : '—'}</td>
+        <td class="n">${r.fund ? `<b>${moneyShort(fv(r.fund, 'ProjectTotalFunds'))}</b><div class="d">${moneyShort(fv(r.fund, 'FederalTotalFunds'))} / ${moneyShort(fv(r.fund, 'StateTotalFunds'))}</div>` : '—'}</td></tr>`).join('')}
+      </tbody><tfoot><tr><td colspan="6">Total</td><td class="n">${moneyShort(est)}</td><td class="n">${moneyShort(fund)}</td></tr></tfoot></table></div>`;
+  }
+  if (lot.length) {
+    html += `<div class="rp-section"><h2>LOTCIP projects (${lot.length})</h2><table class="rt"><thead><tr>
+      <th style="width:9%">Project</th><th>Description</th><th style="width:16%">Municipality</th><th style="width:26%">Project type</th><th class="n" style="width:12%">Application cost</th></tr></thead><tbody>
+      ${lot.map(r => `<tr><td><b>${esc(r.number)}</b></td><td><b>${esc(r.title)}</b></td><td>${esc(r.towns.join(', '))}</td><td>${esc(r.group)}</td><td class="n">${r.cost ? money(r.cost) : '—'}</td></tr>`).join('')}
+      </tbody><tfoot><tr><td colspan="4">Total</td><td class="n">${money(lot.reduce((s, r) => s + (r.cost || 0), 0))}</td></tr></tfoot></table></div>`;
+  }
+  if (mrp.length) {
+    html += `<div class="rp-section"><h2>Resurfacing — Maintenance Resurfacing Program (${mrp.length})</h2><table class="rt"><thead><tr>
+      <th style="width:9%">Project</th><th>Route &amp; limits</th><th style="width:16%">Towns</th><th style="width:14%">Status</th><th class="n" style="width:8%">Lane-mi</th><th style="width:16%">Contractor</th></tr></thead><tbody>
+      ${mrp.map(r => `<tr><td><b>${esc(r.number)}</b></td><td><b>${esc(r.title)}</b></td><td>${esc(r.towns.join(', '))}</td><td>${esc(r.phase)}</td><td class="n">${r.laneMiles || '—'}</td><td>${esc(r.a.Contractor || '—')}</td></tr>`).join('')}
+      </tbody><tfoot><tr><td colspan="4">Total</td><td class="n">${mrp.reduce((s, r) => s + (r.laneMiles || 0), 0).toFixed(2)}</td><td></td></tr></tfoot></table></div>`;
+  }
+  return html;
+}
+
+function buildReport(recs, single) {
+  const now = new Date().toLocaleDateString('en-US', {year: 'numeric', month: 'long', day: 'numeric'});
+  const cap = recs.filter(r => r.program === 'capital'), funded = cap.filter(r => r.fund);
+  const mx = fundMatrix(funded.map(r => r.fund));
+  const head = `<div class="rp-head">
+      <img src="${esc(CONFIG.logoUrl)}" alt="SECOG" onerror="this.outerHTML='&lt;span class=&quot;logo-fallback&quot;&gt;SECOG&lt;/span&gt;'">
+      <div><h1>${single ? 'Project summary' : 'Active Transportation Projects'}</h1>
+        <div class="rp-sub">Southeastern Connecticut planning region · CTDOT Capital, LOTCIP and Maintenance Resurfacing projects</div></div>
+      <div class="rp-date">Generated ${esc(now)}<br>${esc($('#refreshed').textContent || '')}</div></div>`;
+  const legend = `<div class="rp-legend">
+      <span><span class="sw" style="background:none;border:2px solid ${css('--cap-pre')}"></span>Capital · pre-construction</span>
+      <span><span class="sw" style="background:none;border:2px solid ${css('--cap-con')}"></span>Capital · construction</span>
+      <span><span class="sw" style="background:none;border:2px solid ${css('--lotcip')}"></span>LOTCIP</span>
+      <span><span class="sw" style="background:${css('--mrp')};height:3px;width:14px"></span>Resurfacing</span></div>`;
+  const note = `<div class="rp-note">Source: CTDOT Active Projects Viewer and Active Projects by Funding Sources (CTDOT open data, PA 24-40). Funding covers the PE, ROW and construction phases from FY2008–2025 budget data; the funding-year chart places each project's total in the fiscal year of its advertise date. Project areas are approximate.</div>`;
+
+  if (single) {
+    const r = recs[0];
+    const tabs = DETAIL_TABS[r.program];
+    const rest = tabs.slice(1).map(([k, l]) => `<div><h2>${esc(l)}</h2>${detailBody(r, k)}</div>`).join('');
+    return `<div class="rp">${head}
+      <h2 style="margin-top:12px;font-size:14pt;text-transform:none;letter-spacing:0;color:#20326e">${esc(r.title)}</h2>
+      <div style="color:#555;margin-bottom:8px">${esc(r.programLabel)} · ${esc(r.number)} · ${esc(r.towns.join(', '))}</div>
+      <div class="rp-one"><div>${detailBody(r, 'overview')}</div>
+        <div><div class="rp-map">${reportMapSvg([r], r)}</div>${legend}</div></div>
+      ${rest ? `<div class="rp-detail">${rest}</div>` : ''}${note}</div>`;
+  }
+
+  const tiles = [
+    [recs.length, 'Projects listed'],
+    [`${cap.length}`, `Capital (${cap.filter(r => r.group === 'Pre-Construction').length} pre-con · ${cap.filter(r => r.group === 'Construction').length} construction)`],
+    [moneyShort(cap.reduce((s, r) => s + (r.cost || 0), 0)), 'Capital total project estimate'],
+    [moneyShort(mx.total), `Capital funding (${funded.length} projects)`],
+    [`${recs.filter(r => r.program === 'lotcip').length}`, 'LOTCIP · ' + moneyShort(recs.filter(r => r.program === 'lotcip').reduce((s, r) => s + (r.cost || 0), 0))],
+    [recs.filter(r => r.program === 'mrp').reduce((s, r) => s + (r.laneMiles || 0), 0).toFixed(1), 'Resurfacing lane-miles']
+  ];
+  const fundBlock = funded.length ? `<div class="rp-fund">
+      <h2>Dollars by funding source</h2>${pieSvg(sourceSlices(mx), 'Funding by source')}
+      <h2>Dollars by funding year (${state.yearMode === 'FFY' ? 'federal' : 'state'} FY of advertise date)</h2>${pieSvg(yearSlices(funded, state.yearMode), 'Funding by year')}
+    </div>` : `<div class="rp-fund"><h2>Funding</h2><p style="color:#666">No capital projects with funding data in this selection.</p></div>`;
+  return `<div class="rp">${head}${reportFilters(recs)}
+    <div class="rp-tiles">${tiles.map(([v, l]) => `<div><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('')}</div>
+    <div class="rp-grid"><div><div class="rp-map">${reportMapSvg(recs)}</div>${legend}</div>${fundBlock}</div>
+    ${funded.length ? `<div class="rp-section" style="break-inside:avoid"><h2>Funding by source and phase</h2>${fundTableHtml(mx, false)}</div>` : ''}
+    ${reportTables(recs)}${note}</div>`;
+}
+
+function printReport(recs, single) {
+  if (!recs.length) { setStatus('No projects to print — adjust the filters first.', true); setTimeout(() => setStatus(''), 2500); return; }
+  const el = $('#report');
+  el.innerHTML = buildReport(recs, single);
+  const img = el.querySelector('img');
+  let done = false;
+  const go = () => { if (done) return; done = true; window.print(); };
+  if (img && !img.complete) { img.addEventListener('load', go); img.addEventListener('error', go); setTimeout(go, 1500); }
+  else setTimeout(go, 50);
+}
+$('#pdf').addEventListener('click', () => printReport(state.visible || [], false));
+
+/* =====================================================================
+   CSV export (current list)
+   ===================================================================== */
+function toCSV(recs) {
+  const cols = [
+    ['Program', r => r.programLabel], ['Project Number', r => r.number], ['Title', r => r.title],
+    ['Phase / Status', r => r.phase], ['Group / Type / Year', r => r.group], ['Towns in Region', r => r.towns.join('; ')],
+    ['All Towns', r => r.a.Towns || ''], ['Routes', r => r.routes], ['Scope', r => r.scope],
+    ['Total Estimate / Application Cost', r => r.cost ?? ''], ['Construction Estimate', r => r.a.CurrentConstructionEstimate ?? ''],
+    ['PE Spent', r => r.a.PEexpenditures ?? ''], ['ROW Spent', r => r.a.ROWExpenditures ?? ''], ['Construction Spent', r => r.a.ConstructionExpenditures ?? ''],
+    ['Design % Complete', r => r.a.DesignPercentComplete ?? ''],
+    ['Advertise Date', r => r.a.CurrentADVdate ? new Date(r.a.CurrentADVdate).toISOString().slice(0, 10) : ''],
+    ['Est. Construction Completion', r => r.a.EstConstrCompletionDate ? new Date(r.a.EstConstrCompletionDate).toISOString().slice(0, 10) : ''],
+    ['Lane Miles', r => r.laneMiles ?? ''], ['Contractor', r => r.a.Contractor || ''], ['STIP Status', r => r.a.STIPstatusDescription || ''],
+    ['Advertise SFY', r => r.fund ? (fiscalYear(r.fund.AdvertisedDate || r.a.CurrentADVdate, 'SFY') ?? '') : ''],
+    ['Advertise FFY', r => r.fund ? (fiscalYear(r.fund.AdvertisedDate || r.a.CurrentADVdate, 'FFY') ?? '') : ''],
+    ['Funds: Total', r => r.fund ? fv(r.fund, 'ProjectTotalFunds') : ''],
+    ['Funds: Federal', r => r.fund ? fv(r.fund, 'FederalTotalFunds') : ''],
+    ['Funds: State', r => r.fund ? fv(r.fund, 'StateTotalFunds') : ''],
+    ['Funds: Other', r => r.fund ? fv(r.fund, 'OtherTotalFunds') : ''],
+    ['Funds: PE', r => r.fund ? fv(r.fund, 'PETotal') : ''],
+    ['Funds: ROW', r => r.fund ? fv(r.fund, 'ROWTotal') : ''],
+    ['Funds: CN', r => r.fund ? fv(r.fund, 'CNTotal') : ''],
+    ...FUND_SOURCES.map(s => ['Funds: ' + s.label, r => r.fund ? FUND_PHASES.reduce((t, p) => t + fv(r.fund, s.f[p.key]), 0) : '']),
+    ['Description', r => r.description]
+  ];
+  const q = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  return [cols.map(c => q(c[0])).join(',')].concat(recs.map(r => cols.map(c => q(c[1](r))).join(','))).join('\r\n');
+}
+$('#csv').addEventListener('click', () => {
+  const recs = state.tab === 'funding' ? (state.visible || []).filter(r => r.fund) : (state.visible || []);
+  const blob = new Blob(['﻿' + toCSV(recs)], {type: 'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const tn = state.selTowns.size && state.selTowns.size <= 3 ? [...state.selTowns].join('_') : state.selTowns.size ? state.selTowns.size + '_towns' : 'region';
+  a.download = ('SECOG_' + tn + '_active_projects_' + new Date().toISOString().slice(0, 10)).replace(/[^\w-]+/g, '_') + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+});
+
+/* =====================================================================
+   events
+   ===================================================================== */
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  state.tab = b.dataset.tab; $('#phase').value = '';
+  rebuildPhaseOptions(); render();
+}));
+let qTimer;
+$('#q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(render, 150); });
+$('#phase').addEventListener('change', render);
+$('#extent').addEventListener('change', render);
+$('#missing').addEventListener('change', e => { state.includeMissing = e.target.checked; rebuildPhaseOptions(); render(); });
+/* ---------- town picker (one or many towns; none ticked = whole region) ---------- */
+function buildTownPicker() {
+  $('#tp-list').innerHTML = state.towns.map(t =>
+    `<label><input type="checkbox" value="${esc(t)}" ${state.selTowns.has(t) ? 'checked' : ''}> ${esc(t)}</label>`).join('');
+  updateTownLabel();
+}
+function updateTownLabel() {
+  const n = state.selTowns.size, all = state.towns.length;
+  const txt = !n || n === all ? `All ${all} towns` : n <= 2 ? [...state.selTowns].sort().join(', ') : `${n} towns selected`;
+  $('#tp-text').textContent = txt;
+  $('#tp-btn').title = n && n < all ? [...state.selTowns].sort().join(', ') : 'All towns in the region';
+  $('#tp-count').textContent = !n || n === all ? 'Showing all towns' : `${n} of ${all} selected`;
+}
+function styleTowns(skipFit) {
+  const layer = townLayer.getLayers()[0];
+  if (!layer) return;
+  const sel = state.selTowns, any = sel.size && sel.size < state.towns.length;
+  let b = null;
+  layer.eachLayer(l => {
+    const on = !any || sel.has(l.feature.properties.Municipality);
+    l.setStyle(on && any ? {color: css('--strong'), weight: 2.2, opacity: .85, dashArray: null}
+                         : {color: css('--strong'), weight: 1.2, opacity: on ? .45 : .18, dashArray: '4 4'});
+    const tt = l.getTooltip(); if (tt && tt.getElement()) tt.getElement().style.opacity = on ? '' : '.35';
+    if (on) b = b ? b.extend(l.getBounds()) : L.latLngBounds(l.getBounds().getSouthWest(), l.getBounds().getNorthEast());
+  });
+  // debounced: Leaflet ignores a new zoom while one is animating, so rapid ticks would lose the union
+  if (!skipFit && b) { clearTimeout(styleTowns.t); styleTowns.t = setTimeout(() => map.fitBounds(b, {padding: [20, 20]}), 250); }
+}
+function applyTowns() {
+  if (state.selTowns.size === state.towns.length) state.selTowns.clear();   // all ticked = whole region
+  updateTownLabel();
+  try {
+    const u = new URL(location.href);
+    if (state.selTowns.size) u.searchParams.set('towns', [...state.selTowns].sort().join(',')); else u.searchParams.delete('towns');
+    history.replaceState(null, '', u);
+  } catch (e) { /* file:// or sandboxed */ }
+  styleTowns();
+  render();
+}
+function openPicker(open) {
+  $('#tp-panel').hidden = !open;
+  $('#tp-btn').setAttribute('aria-expanded', open);
+  if (open) { const f = $('#tp-list input'); if (f) f.focus(); }
+}
+$('#tp-btn').addEventListener('click', () => openPicker($('#tp-panel').hidden));
+$('#tp-list').addEventListener('change', () => {
+  // the ticked boxes are the selection; none or all ticked both mean the whole region
+  state.selTowns = new Set([...document.querySelectorAll('#tp-list input:checked')].map(i => i.value));
+  applyTowns();
+});
+$('#tp-panel').addEventListener('click', e => {
+  const act = e.target.closest('[data-act]'); if (!act) return;
+  if (act.dataset.act === 'done') { openPicker(false); $('#tp-btn').focus(); return; }
+  state.selTowns.clear();
+  document.querySelectorAll('#tp-list input').forEach(i => { i.checked = act.dataset.act === 'all'; });
+  applyTowns();
+});
+document.addEventListener('click', e => { if (!$('#tp-panel').hidden && !e.target.closest('.townpick')) openPicker(false); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('#tp-panel').hidden) { openPicker(false); $('#tp-btn').focus(); }
+  else if (state.selectedId) closeDetail();
+});
+$('#list').addEventListener('click', e => {
+  const yb = e.target.closest('[data-ym]');
+  if (yb) { state.yearMode = yb.dataset.ym; render(); return; }
+  const li = e.target.closest('li[data-id]'); if (li) select(li.dataset.id, true);
+});
+// pie tooltips
+const tip = $('#tip');
+$('#list').addEventListener('mousemove', e => {
+  const t = e.target.closest('[data-tip]');
+  if (!t) { tip.style.display = 'none'; return; }
+  tip.textContent = t.getAttribute('data-tip');
+  tip.style.display = 'block';
+  const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8);
+  tip.style.left = x + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+});
+$('#list').addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+
+map.on('moveend', () => { if ($('#extent').checked) render(); });
+
+async function start(region) {
+  try { await loadRegion(region); }
+  catch (err) { console.error(err); setStatus('Could not load CTDOT data: ' + err.message, true); $('#listcount').textContent = 'Data unavailable'; }
+}
+
+(() => {
+  const t = new URLSearchParams(location.search).get('towns');
+  if (t) t.split(',').map(x => x.trim()).filter(Boolean).forEach(x => state.selTowns.add(x));
+  start(CONFIG.region);
+})();
+</script>
+</body>
+</html>

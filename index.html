@@ -156,7 +156,7 @@ table.ftab tr.tot td{font-weight:600;border-top:1px solid var(--line);color:var(
 .mapwrap{position:relative;min-height:0;display:flex}
 .mapwrap #map{flex:1}
 .legend{position:absolute;left:12px;bottom:24px;z-index:700;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:12px;box-shadow:var(--shadow);color:var(--ink-2)}
-.legend .lt{font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.legend .lt{display:block;border:0;background:none;padding:0;cursor:default;font-family:inherit;font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
 .legend div.r{display:flex;align-items:center;gap:8px;margin:3px 0}
 footer{font-size:11.5px;color:#dfe5f3;padding:8px 22px;background:var(--navy);display:flex;gap:6px 18px;flex-wrap:wrap}
 footer a{color:#fff}
@@ -191,29 +191,71 @@ footer a{color:#fff}
 @media (max-width:1100px){
   .brand .sub{display:none}
 }
+/* phones & small tablets: app-style layout, one full-height pane at a time (Map or List) */
+#viewtoggle{display:none}
 @media (max-width:900px){
-  html,body{height:auto}
-  body{min-height:100%}
-  main{flex:none;display:flex;flex-direction:column}
-  .mapwrap{height:60vh;min-height:320px;flex:none}
-  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .mapwrap{order:-1}
-  aside{border-right:0;border-top:1px solid var(--line)}
-  #list{max-height:none;overflow:visible}
-  .brand{padding:10px 16px}
-  .townpick{padding:10px 16px;width:100%;justify-content:space-between}
-  #tp-btn{flex:1;max-width:none;min-width:0}
-  #tp-panel{right:16px}
+  html,body{height:100%;overflow:hidden}
+  body{height:100dvh}
+  /* compact header: logo + title on one row, town picker below */
+  header{min-height:0}
+  .brand{padding:8px 16px;gap:12px;flex-wrap:nowrap}
+  .brand img{height:26px}
+  .brand .logo-fallback{font-size:20px}
+  .brand h1{font-size:13.5px;line-height:1.25}
   .brand .divider{display:none}
+  .townpick{padding:7px 16px;width:100%;justify-content:space-between}
+  .townpick .tp-label{font-size:12px}
+  #tp-btn{flex:1;max-width:none;min-width:0;min-height:40px}
+  #tp-panel{left:16px;right:16px;top:calc(100% - 2px);width:auto;max-width:none}
+  .tp-list{max-height:min(420px,55dvh)}
+  .tp-list label{padding:8px 0;font-size:14px}
+  .tp-head button{padding:8px 0;font-size:13.5px}
+  /* KPIs become a swipeable strip */
+  .kpis{display:flex;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch;flex:none}
+  .kpis::-webkit-scrollbar{display:none}
+  .kpi{flex:0 0 auto;min-width:132px;max-width:180px;padding:7px 14px;scroll-snap-align:start}
+  .kpi .v{font-size:18px}
+  .kpi .l{font-size:11.5px;line-height:1.3}
+  /* map and list share the space under the header; body[data-view] picks which one shows */
+  main{flex:1;display:block;position:relative;min-height:0}
+  aside,.mapwrap{position:absolute;inset:0}
+  body:not([data-view="list"]) aside{display:none}
+  body[data-view="list"] .mapwrap{visibility:hidden;pointer-events:none}
+  aside{border-right:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+  #list{flex:none;overflow:visible}
+  .tabs{position:sticky;top:0;z-index:5;background:var(--panel);overflow-x:auto;scrollbar-width:none;flex:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{flex:1 0 auto;padding:13px 10px 11px}
+  .filters{flex:none}
+  .filters input[type=search],.filters select{font-size:16px;padding:9px 10px}   /* 16px stops iOS zoom-on-focus */
+  .filters .row label{padding:4px 0}
+  .listhead{flex-wrap:wrap;flex:none}
+  .btn{padding:9px 12px}
+  #list li{padding:12px 16px 12px 13px}
+  .seg button{padding:6px 10px}
+  /* footer rides at the bottom of the list pane (moved there by script) */
+  aside footer{flex:none;margin-top:8px}
+  body > footer{display:none}
+  /* collapsible legend */
+  .legend{left:10px;bottom:calc(14px + env(safe-area-inset-bottom));padding:0;font-size:12px}
+  .legend .lt{display:flex;align-items:center;gap:6px;margin:0;padding:8px 12px;cursor:pointer;border:0;background:none;font:inherit;font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em}
+  .legend .lt::after{content:"";width:6px;height:6px;border:solid currentColor;border-width:0 1.6px 1.6px 0;transform:rotate(-135deg);margin:3px 0 0 2px}
+  .legend.open .lt::after{transform:rotate(45deg);margin:-3px 0 0 2px}
+  .legend:not(.open) div.r{display:none}
+  .legend.open{padding-bottom:8px}
+  .legend.open div.r{padding:0 12px}
+  .leaflet-control-attribution{font-size:9px;max-width:55vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .leaflet-touch .leaflet-bar a{width:36px;height:36px;line-height:36px}
+  /* floating Map / List switch */
+  #viewtoggle{display:flex;align-items:center;gap:8px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));z-index:1250;border:0;border-radius:24px;padding:11px 20px;background:var(--navy);color:#fff;font-weight:600;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.28);cursor:pointer}
+  #viewtoggle .n{font-variant-numeric:tabular-nums;opacity:.8;font-weight:500}
+  body.detail-open #viewtoggle,body.picker-open #viewtoggle{display:none}
+  body.detail-open .legend{display:none}
 }
 @media (max-width:520px){
-  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .kpi{padding:8px 16px}
-  .kpi .v{font-size:20px}
-  .brand{flex-wrap:wrap;gap:8px}
-  .brand h1{font-size:16px}
   .pie{grid-template-columns:1fr}
   .pie svg{margin:0 auto}
+  .flev b{font-size:14px}
   .leaflet-popup-content{width:260px!important}
 }
 /* ---------- docked project detail panel ---------- */
@@ -247,11 +289,19 @@ dl.kv dd a{color:var(--blue)}
 .tiles b{display:block;font-size:15px;color:var(--strong);font-variant-numeric:tabular-nums}
 .tiles span{font-size:11.5px;color:var(--ink-3)}
 .routes{font-size:12px;color:var(--ink-2);line-height:1.5}
-.btn.ghost{background:transparent;color:var(--navy);border:1px solid var(--navy)}
+.btn.ghost{background:transparent;color:var(--strong);border:1px solid var(--strong)}
 .btn.ghost:hover{background:var(--navy);color:#fff}
 .lh-btns{display:flex;gap:6px;flex:none}
 @media (max-width:900px){
-  #detail{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;max-height:72vh;border-radius:14px 14px 0 0;z-index:1300}
+  /* bottom sheet: leaves the top of the map visible so the selected project stays in view */
+  #detail{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;height:52dvh;max-height:52dvh;border-radius:14px 14px 0 0;z-index:1300;border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}
+  .d-head{padding:12px 12px 8px 16px}
+  .d-actions button{width:40px;height:40px}
+  .d-head h2{margin-top:4px}
+  .d-tabs{overflow-x:auto;scrollbar-width:none}
+  .d-tabs::-webkit-scrollbar{display:none}
+  .d-tabs button{padding:11px 10px 10px}
+  .tiles b{font-size:14px}
 }
 
 /* ---------- print report (built on demand, hidden on screen) ---------- */
@@ -380,8 +430,8 @@ dl.kv dd a{color:var(--blue)}
     <div id="map" aria-label="Map of projects"></div>
     <div id="status" role="status"></div>
     <section id="detail" aria-label="Project details" hidden></section>
-    <div class="legend">
-      <div class="lt">Projects</div>
+    <div class="legend" id="legend">
+      <button type="button" class="lt" id="legend-btn" aria-expanded="true" aria-controls="legend">Projects</button>
       <div class="r"><span class="sym poly" style="color:var(--cap-pre)"></span>Capital · pre-construction</div>
       <div class="r"><span class="sym poly" style="color:var(--cap-con)"></span>Capital · construction</div>
       <div class="r"><span class="sym poly" style="color:var(--lotcip)"></span>LOTCIP</div>
@@ -389,6 +439,7 @@ dl.kv dd a{color:var(--blue)}
     </div>
   </div>
 </main>
+<button type="button" id="viewtoggle" aria-controls="list"></button>
 <div id="tip" role="tooltip"></div>
 <div id="report" aria-hidden="true"></div>
 
@@ -593,6 +644,7 @@ const state = {
 /* =====================================================================
    map
    ===================================================================== */
+const MOBILE = matchMedia('(max-width:900px)');   // keep in sync with the CSS breakpoint
 const map = L.map('map', {preferCanvas: false, zoomSnap: 0.25}).setView([41.5, -72.1], 10);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
   maxZoom: 16, attribution: 'Basemap &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
@@ -872,6 +924,7 @@ function render() {
   list.sort((a, b) => ({capital: 0, lotcip: 1, mrp: 2}[a.program] - {capital: 0, lotcip: 1, mrp: 2}[b.program]) || String(a.number).localeCompare(String(b.number)));
   state.visible = list;
   state.inTabCount = inTab.length;
+  updateViewToggle();
 
   $('#listcount').textContent = list.length + ' of ' + inTab.length + ' project' + (inTab.length === 1 ? '' : 's') + ($('#extent').checked && list.length < inTab.length ? ' in view' : '');
   const ul = $('#list');
@@ -1049,7 +1102,8 @@ const ICON = {
 function renderDetail() {
   const el = $('#detail');
   const r = state.records.find(x => x.id === state.selectedId);
-  if (!r) { el.hidden = true; el.innerHTML = ''; return; }
+  if (!r) { el.hidden = true; el.innerHTML = ''; document.body.classList.remove('detail-open'); return; }
+  document.body.classList.add('detail-open');
   const tabs = DETAIL_TABS[r.program];
   const tab = tabs.some(t => t[0] === state.detailTab) ? state.detailTab : 'overview';
   const status = r.program === 'capital' ? r.phase : r.program === 'mrp' ? r.phase : (r.group || 'LOTCIP');
@@ -1071,7 +1125,12 @@ function renderDetail() {
   el.hidden = false;
 }
 function panelPad() {
-  const open = !$('#detail').hidden && innerWidth > 900;
+  const open = !$('#detail').hidden;
+  if (MOBILE.matches) {   // bottom sheet covers the lower part of the map
+    const sheet = open ? $('#detail').getBoundingClientRect().top : innerHeight;
+    const mapBox = $('#map').getBoundingClientRect();
+    return {paddingTopLeft: [24, 24], paddingBottomRight: [24, Math.max(24, mapBox.bottom - sheet + 24)]};
+  }
   return {paddingTopLeft: [50, 50], paddingBottomRight: [open ? $('#detail').offsetWidth + 40 : 50, 50]};
 }
 function zoomTo(rec) {
@@ -1338,6 +1397,7 @@ function applyTowns() {
 function openPicker(open) {
   $('#tp-panel').hidden = !open;
   $('#tp-btn').setAttribute('aria-expanded', open);
+  document.body.classList.toggle('picker-open', !!open);
   if (open) { const f = $('#tp-list input'); if (f) f.focus(); }
 }
 $('#tp-btn').addEventListener('click', () => openPicker($('#tp-panel').hidden));
@@ -1362,8 +1422,43 @@ document.addEventListener('keydown', e => {
 $('#list').addEventListener('click', e => {
   const yb = e.target.closest('[data-ym]');
   if (yb) { state.yearMode = yb.dataset.ym; render(); return; }
-  const li = e.target.closest('li[data-id]'); if (li) select(li.dataset.id, true);
+  const li = e.target.closest('li[data-id]'); if (!li) return;
+  if (MOBILE.matches) setView('map');     // show the project on the map, details in the bottom sheet
+  select(li.dataset.id, true);
 });
+
+/* ---------- small screens: Map / List switch, collapsible legend, footer in list pane ---------- */
+function setView(v) {
+  document.body.dataset.view = v;
+  if (v === 'map') map.invalidateSize();
+  updateViewToggle();
+}
+function updateViewToggle() {
+  const b = $('#viewtoggle'), list = document.body.dataset.view === 'list';
+  const n = state.visible ? state.visible.length : 0;
+  b.innerHTML = list
+    ? '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 3.5l4-1.5 5 1.5 4-1.5v10.5l-4 1.5-5-1.5-4 1.5zM5.5 2v10.5M10.5 3.5V14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Map'
+    : `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 4h9M5 8h9M5 12h9M2 4h.01M2 8h.01M2 12h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>List <span class="n">${n}</span>`;
+  b.setAttribute('aria-label', list ? 'Show map' : `Show list of ${n} projects`);
+}
+$('#viewtoggle').addEventListener('click', () => setView(document.body.dataset.view === 'list' ? 'map' : 'list'));
+$('#legend-btn').addEventListener('click', () => {
+  if (!MOBILE.matches) return;
+  const open = $('#legend').classList.toggle('open');
+  $('#legend-btn').setAttribute('aria-expanded', open);
+});
+function applyLayout() {
+  const m = MOBILE.matches, foot = document.querySelector('footer');
+  if (m && foot.parentElement !== $('aside')) $('aside').appendChild(foot);
+  if (!m && foot.parentElement !== document.body) $('#report').after(foot);
+  $('#legend').classList.toggle('open', !m);
+  $('#legend-btn').setAttribute('aria-expanded', !m);
+  if (!document.body.dataset.view) document.body.dataset.view = 'map';
+  map.invalidateSize();
+  updateViewToggle();
+}
+MOBILE.addEventListener('change', applyLayout);
+applyLayout();
 // pie tooltips
 const tip = $('#tip');
 $('#list').addEventListener('mousemove', e => {

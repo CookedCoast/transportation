@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SECOG Active Transportation Projects</title>
-<meta name="description" content="CTDOT active Capital, LOTCIP and Maintenance Resurfacing projects in the Southeastern Connecticut planning region, with Capital funding by source, read live from CTDOT open data services.">
+<meta name="description" content="CTDOT active TIP, LOTCIP and Maintenance Resurfacing projects in the Southeastern Connecticut planning region, with TIP funding by source, read live from CTDOT open data services.">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -229,6 +229,7 @@ footer a{color:#fff}
   .filters{flex:none}
   .filters input[type=search],.filters select{font-size:16px;padding:9px 10px}   /* 16px stops iOS zoom-on-focus */
   .filters .row label{padding:4px 0}
+  .scope button{padding:7px 13px;font-size:14px}
   .listhead{flex-wrap:wrap;flex:none}
   .btn{padding:9px 12px}
   #list li{padding:12px 16px 12px 13px}
@@ -292,6 +293,14 @@ dl.kv dd a{color:var(--blue)}
 .btn.ghost{background:transparent;color:var(--strong);border:1px solid var(--strong)}
 .btn.ghost:hover{background:var(--navy);color:#fff}
 .lh-btns{display:flex;gap:6px;flex:none}
+/* scope filter: multi-select chips */
+.scope{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.scope .s-lab{font-size:12px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
+.scope button{border:1px solid var(--line);background:var(--panel);color:var(--ink-3);border-radius:16px;padding:4px 11px;font-size:12.5px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.scope button:hover{border-color:var(--strong);color:var(--strong)}
+.scope button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.scope button .n{font-variant-numeric:tabular-nums;opacity:.75;font-size:11.5px}
+.scope button[aria-pressed="true"]::before{content:"";width:8px;height:5px;border:solid currentColor;border-width:0 0 1.6px 1.6px;transform:rotate(-45deg) translate(1px,-1px)}
 @media (max-width:900px){
   /* bottom sheet: leaves the top of the map visible so the selected project stays in view */
   #detail{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;height:52dvh;max-height:52dvh;border-radius:14px 14px 0 0;z-index:1300;border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}
@@ -380,7 +389,7 @@ dl.kv dd a{color:var(--blue)}
     <span class="divider" aria-hidden="true"></span>
     <div>
       <h1 id="title" class="cap">Active Transportation Projects</h1>
-      <div class="sub" id="subtitle">CTDOT Capital, LOTCIP and Maintenance Resurfacing projects in the Southeastern Connecticut planning region · live from CTDOT open data</div>
+      <div class="sub" id="subtitle">CTDOT TIP, LOTCIP and Maintenance Resurfacing projects in the Southeastern Connecticut planning region · live from CTDOT open data</div>
     </div>
   </div>
   <div class="townpick">
@@ -398,9 +407,9 @@ dl.kv dd a{color:var(--blue)}
 </header>
 
 <section class="kpis" aria-label="Summary">
-  <div class="kpi"><div class="v" id="k-pre">–</div><div class="l"><span class="sym poly" style="color:var(--cap-pre)"></span>Capital · pre-construction</div></div>
-  <div class="kpi"><div class="v" id="k-con">–</div><div class="l"><span class="sym poly" style="color:var(--cap-con)"></span>Capital · construction</div></div>
-  <div class="kpi"><div class="v" id="k-capest">–</div><div class="l">Capital total project estimate</div></div>
+  <div class="kpi"><div class="v" id="k-pre">–</div><div class="l"><span class="sym poly" style="color:var(--cap-pre)"></span>TIP · pre-construction</div></div>
+  <div class="kpi"><div class="v" id="k-con">–</div><div class="l"><span class="sym poly" style="color:var(--cap-con)"></span>TIP · construction</div></div>
+  <div class="kpi"><div class="v" id="k-capest">–</div><div class="l">TIP total project estimate</div></div>
   <div class="kpi"><div class="v" id="k-lot">–</div><div class="l"><span class="sym poly" style="color:var(--lotcip)"></span>LOTCIP projects</div></div>
   <div class="kpi"><div class="v" id="k-lotcost">–</div><div class="l">LOTCIP application cost</div></div>
   <div class="kpi"><div class="v" id="k-mrp">–</div><div class="l"><span class="sym line" style="color:var(--mrp)"></span>Resurfacing lane-miles</div></div>
@@ -410,17 +419,23 @@ dl.kv dd a{color:var(--blue)}
   <aside>
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="all" aria-selected="true">All<span class="n" id="n-all"></span></button>
-      <button role="tab" data-tab="capital" aria-selected="false">Capital<span class="n" id="n-capital"></span></button>
+      <button role="tab" data-tab="capital" aria-selected="false">TIP<span class="n" id="n-capital"></span></button>
       <button role="tab" data-tab="lotcip" aria-selected="false">LOTCIP<span class="n" id="n-lotcip"></span></button>
       <button role="tab" data-tab="mrp" aria-selected="false">Paving<span class="n" id="n-mrp"></span></button>
-      <button role="tab" data-tab="funding" aria-selected="false" title="Capital projects in CTDOT's funding-by-source report (PA 24-40)">Funding<span class="n" id="n-funding"></span></button>
+      <button role="tab" data-tab="funding" aria-selected="false" title="TIP projects in CTDOT's funding-by-source report (PA 24-40)">Funding<span class="n" id="n-funding"></span></button>
     </div>
     <div class="filters">
       <input class="full" type="search" id="q" placeholder="Search project number, title, route, description…" aria-label="Search projects">
       <select id="phase" class="full" aria-label="Phase or status"><option value="">All phases / statuses</option></select>
+      <div class="scope full" role="group" aria-label="Project scope">
+        <span class="s-lab">Scope</span>
+        <button type="button" data-scope="Town" aria-pressed="true" title="Projects in a single town">Town<span class="n" id="n-s-Town"></span></button>
+        <button type="button" data-scope="Regional" aria-pressed="true" title="Projects covering several towns, or a CTDOT district-wide program">Regional<span class="n" id="n-s-Regional"></span></button>
+        <button type="button" data-scope="Statewide" aria-pressed="true" title="Projects CTDOT marks as statewide, or that cover 20 or more towns">Statewide<span class="n" id="n-s-Statewide"></span></button>
+      </div>
       <div class="row full">
         <label><input type="checkbox" id="extent" checked> List only what's in map view</label>
-        <label title="Capital projects CTDOT lists under 'Construction (Missing Dates)' or 'Design (Missing Dates)'. The CTDOT viewer hides these."><input type="checkbox" id="missing"> Include capital projects missing schedule dates</label>
+        <label title="TIP projects CTDOT lists under 'Construction (Missing Dates)' or 'Design (Missing Dates)'. The CTDOT viewer hides these."><input type="checkbox" id="missing"> Include TIP projects missing schedule dates</label>
       </div>
     </div>
     <div class="listhead"><span id="listcount">Loading…</span><span class="lh-btns"><button id="pdf" class="btn ghost" type="button" title="Print-ready report of the projects listed (choose “Save as PDF” in the print dialog)">PDF report</button><button id="csv" class="btn" type="button">Download CSV</button></span></div>
@@ -432,8 +447,8 @@ dl.kv dd a{color:var(--blue)}
     <section id="detail" aria-label="Project details" hidden></section>
     <div class="legend" id="legend">
       <button type="button" class="lt" id="legend-btn" aria-expanded="true" aria-controls="legend">Projects</button>
-      <div class="r"><span class="sym poly" style="color:var(--cap-pre)"></span>Capital · pre-construction</div>
-      <div class="r"><span class="sym poly" style="color:var(--cap-con)"></span>Capital · construction</div>
+      <div class="r"><span class="sym poly" style="color:var(--cap-pre)"></span>TIP · pre-construction</div>
+      <div class="r"><span class="sym poly" style="color:var(--cap-con)"></span>TIP · construction</div>
       <div class="r"><span class="sym poly" style="color:var(--lotcip)"></span>LOTCIP</div>
       <div class="r"><span class="sym line" style="color:var(--mrp)"></span>Resurfacing (MRP)</div>
     </div>
@@ -467,12 +482,15 @@ const CONFIG = {
     capital: 'CTDOT_Project_Work_Areas/FeatureServer/0',
     lotcip:  'CTDOT_LOTCIP_Projects/FeatureServer/0',
     mrp:     'CTDOT_Maintenance_Resurfacing_Program_Active/FeatureServer/0',
-    // PA 24-40 funding report layer (CTDOT Active Projects by Funding Sources). Joined to capital projects by ProjectNumber.
+    // PA 24-40 funding report layer (CTDOT Active Projects by Funding Sources). Joined to TIP projects by ProjectNumber.
     funding: 'CTDOT_Active_Projects_Fundings/FeatureServer/0'
   },
   // Same active-phase filter the CTDOT viewer uses for Capital Projects.
   activePhases: ['01_Planning','02_Pre-Design','03_Final-Design','04_Contract-Processing','05_Construction','05_Construction (Pending)'],
-  missingDatePhases: ['Construction (Missing Dates)','Design (Missing Dates)']
+  missingDatePhases: ['Construction (Missing Dates)','Design (Missing Dates)'],
+  // Scope filter: a TIP or resurfacing project covering this many towns or more counts as Statewide
+  // (the region has 19 towns, so these always extend well beyond it).
+  statewideTownCount: 20
 };
 
 /* =====================================================================
@@ -637,6 +655,7 @@ const state = {
   region: null, towns: [], townGeo: null, records: [],
   tab: 'all', selectedId: null, includeMissing: false,
   selTowns: new Set(),     // empty = all towns in the region
+  scopes: new Set(['Town', 'Regional', 'Statewide']),   // scope filter; all on = no filtering
   detailTab: 'overview',   // last-used tab in the project panel
   yearMode: 'SFY'          // fiscal-year basis for the funding-year pie: 'SFY' or 'FFY'
 };
@@ -673,11 +692,29 @@ function areaOf(rec) {
 /* =====================================================================
    normalisation — one record shape for all three programs
    ===================================================================== */
+// Scope from the project's full town list (all towns, including outside the region).
+// CTDOT's DistrictID marks almost every project "Local", even multi-town corridor programs,
+// so it is only used where it says Statewide, or District for a project with no town list.
+function scopeOf(r) {
+  const a = r.a;
+  if (r.program === 'lotcip') return 'Town';
+  let all;
+  if (r.program === 'capital') {
+    if (a.DistrictID === 'Statewide') return 'Statewide';
+    all = String(a.Towns || '').split(',').map(t => t.trim()).filter(Boolean);
+    if (!all.length && a.DistrictID === 'District') return 'Regional';
+    if (!all.length) all = r.towns;                      // untagged: towns it was matched to on the map
+  } else {
+    all = [a.Town1, a.Town2, a.Town3, a.Town4].filter(Boolean);
+  }
+  const n = new Set(all.map(t => String(t).toLowerCase())).size;
+  return n >= CONFIG.statewideTownCount ? 'Statewide' : n > 1 ? 'Regional' : 'Town';
+}
 function capitalRecord(f, towns) {
   const a = f.properties;
   const pre = !/^05_|^Construction/.test(a.CurrentSchedulePhase || '');
   return {
-    id: 'C' + a.OBJECTID, program: 'capital', programLabel: 'Capital',
+    id: 'C' + a.OBJECTID, program: 'capital', programLabel: 'TIP',
     number: a.ProjectNumber || a.ProposedProjectNumber || '', title: a.Title || '(untitled)',
     description: a.ProjectDescription || '', towns, phase: phaseLabel(a.CurrentSchedulePhase),
     phaseRaw: a.CurrentSchedulePhase, group: pre ? 'Pre-Construction' : 'Construction',
@@ -742,7 +779,7 @@ async function loadRegion(region) {
   styleTowns(!state.selTowns.size);
 
   // 2. capital: attribute match on Towns, plus a spatial check for records with no town list
-  setStatus('Loading capital projects…');
+  setStatus('Loading TIP projects…');
   const phases = CONFIG.activePhases.concat(CONFIG.missingDatePhases);
   const phaseWhere = 'CurrentSchedulePhase IN (' + phases.map(sq).join(',') + ')';
   const townWhere = '(' + state.towns.map(t => 'Towns LIKE ' + sq('%' + t + '%')).join(' OR ') + ')';
@@ -805,6 +842,7 @@ async function loadRegion(region) {
 
   state.records = caps.concat(lot.map(lotcipRecord), mrp.map(f => mrpRecord(f, state.towns)));
   state.records.forEach(r => { r.towns = r.towns.filter(t => state.towns.includes(t)).length ? r.towns.filter(t => state.towns.includes(t)) : r.towns; });
+  state.records.forEach(r => { r.scopeClass = scopeOf(r); });
 
   buildLayers();
   rebuildPhaseOptions();
@@ -848,7 +886,7 @@ function buildLayers() {
    ===================================================================== */
 function phaseOptionsFor(tab) {
   const recs = state.records.filter(r => tab === 'all' || r.program === tab);
-  if (tab === 'all') return [['grp:Pre-Construction', 'Capital · Pre-Construction'], ['grp:Construction', 'Capital · Construction']];
+  if (tab === 'all') return [['grp:Pre-Construction', 'TIP · Pre-Construction'], ['grp:Construction', 'TIP · Construction']];
   if (tab === 'lotcip') return [...new Set(recs.map(r => r.group).filter(Boolean))].sort().map(v => ['grp:' + v, v]);
   if (tab === 'funding') return phaseOptionsFor('capital');
   const order = CONFIG.activePhases.concat(CONFIG.missingDatePhases).map(phaseLabel);
@@ -866,10 +904,12 @@ function rebuildPhaseOptions() {
   if (opts.some(o => o[0] === cur)) sel.value = cur;
 }
 
-function baseFiltered() {
+const allScopes = () => state.scopes.size === 3;
+function baseFiltered(ignoreScope) {
   const q = $('#q').value.trim().toLowerCase();
   const phase = $('#phase').value, sel = state.selTowns;
   return state.records.filter(r => {
+    if (!ignoreScope && !state.scopes.has(r.scopeClass)) return false;
     if (r.program === 'capital' && !state.includeMissing && CONFIG.missingDatePhases.includes(r.phaseRaw)) return false;
     if (sel.size && !r.towns.some(t => sel.has(t))) return false;
     if (phase) {
@@ -886,7 +926,19 @@ function baseFiltered() {
   });
 }
 
+function updateScopeChips() {
+  // counts reflect every other filter, so each chip shows what it would add
+  const pool = baseFiltered(true);
+  const prog = state.tab === 'funding' ? 'capital' : state.tab;
+  const inTab = pool.filter(r => state.tab === 'all' || r.program === prog);
+  document.querySelectorAll('.scope [data-scope]').forEach(b => {
+    const k = b.dataset.scope;
+    b.setAttribute('aria-pressed', state.scopes.has(k));
+    $('#n-s-' + k).textContent = inTab.filter(r => r.scopeClass === k).length;
+  });
+}
 function render() {
+  updateScopeChips();
   const pre = baseFiltered();                         // filters except tab + extent
   const prog = state.tab === 'funding' ? 'capital' : state.tab;
   const inTab = pre.filter(r => state.tab === 'all' || r.program === prog);
@@ -951,7 +1003,7 @@ function renderFunding(list, ul) {
   const funded = list.filter(r => r.fund);
   const mx = fundMatrix(funded.map(r => r.fund));
   const pct = v => !mx.total || !v ? '0%' : v / mx.total < .01 ? '<1%' : (v / mx.total * 100).toFixed(0) + '%';
-  $('#listcount').textContent = funded.length + ' of ' + list.length + ' capital project' + (list.length === 1 ? ' has' : 's have') + ' funding data' + ($('#extent').checked ? ' (in view)' : '');
+  $('#listcount').textContent = funded.length + ' of ' + list.length + ' TIP project' + (list.length === 1 ? ' has' : 's have') + ' funding data' + ($('#extent').checked ? ' (in view)' : '');
   const ym = state.yearMode;
   const summary = `<li class="fsum">
       <h2 class="cap">Total funding</h2>
@@ -986,7 +1038,7 @@ function renderFunding(list, ul) {
       <div class="stack thin">${seg(fv(f, 'FederalTotalFunds'), '#1f73ae')}${seg(fv(f, 'StateTotalFunds'), '#76b053')}${seg(fv(f, 'OtherTotalFunds'), '#9aa0a8')}</div>
     </li>`;
   }).join('');
-  ul.innerHTML = summary + (rows || '<li class="empty">No capital projects with funding data match these filters.</li>');
+  ul.innerHTML = summary + (rows || '<li class="empty">No TIP projects with funding data match these filters.</li>');
 }
 
 /* =====================================================================
@@ -1020,7 +1072,7 @@ function detailBody(r, tab) {
           ['Phase', `${esc(r.phase)} <span class="chip">${esc(r.group)}</span>`],
           ['Design complete', dp != null ? `<div class="meter"><span style="width:${pctOf(dp, 100)}%"></span></div><div class="meter-l"><span>${dp}%</span></div>` : ''],
           ['STIP status', tx(a.STIPstatusDescription)],
-          ['Scope', tx(a.DistrictID)],
+          ['Scope', esc(r.scopeClass) + (a.DistrictID ? ` <span class="muted">(CTDOT: ${esc(a.DistrictID)})</span>` : '')],
           ['Proposed project #', tx(a.ProposedProjectNumber)]
         ])) +
         sec('Location', kv([
@@ -1066,7 +1118,7 @@ function detailBody(r, tab) {
   }
   if (r.program === 'lotcip') {
     return sec('Project', kv([
-      ['Municipality', tx(a.MunicipalityDescription)], ['Project type', tx(a.PrimaryProjectTypeDescription)],
+      ['Municipality', tx(a.MunicipalityDescription)], ['Scope', esc(r.scopeClass)], ['Project type', tx(a.PrimaryProjectTypeDescription)],
       ['Status', tx(a.MapStatus)], ['Original application cost', m(a.OrigApplTotalCost)],
       ['Council of governments', tx(a.COGDescription)], ['Contact', tx(a.Contact)]
     ])) + '<p class="muted" style="font-size:12px">LOTCIP outlines are approximate project areas, not exact limits.</p>';
@@ -1083,7 +1135,7 @@ function detailBody(r, tab) {
       sec('Contractors', kv([['Contractor', tx(a.Contractor)], ['Subcontractor', tx(a.SubContractor)]])) +
       sec('Record', kv([['Last updated', d(a.DateOfLastUpdate)], ['Remarks', tx(a.Remarks)]]));
   }
-  return sec('Status', kv([['Status', tx(a.Phase)], ['Program year', tx(a.Year)], ['Canceled', a.Canceled === 'Yes' ? 'Yes' : '']])) +
+  return sec('Status', kv([['Status', tx(a.Phase)], ['Scope', esc(r.scopeClass)], ['Program year', tx(a.Year)], ['Canceled', a.Canceled === 'Yes' ? 'Yes' : '']])) +
     sec('Location', kv([
       ['Towns', esc(r.towns.join(', '))], ['Route', tx(a.Route) + (a.Direction ? ' ' + esc(a.Direction) : '')],
       ['Limits', tx(titleCase(a.Termini))], ['Mile points', a.BeginMilePoint != null ? a.BeginMilePoint + ' – ' + a.EndMilePoint : '']
@@ -1199,7 +1251,7 @@ function reportMapSvg(recs, focus) {
 
 function reportFilters(recs) {
   const n = state.selTowns.size;
-  const tabName = {all: 'All projects', capital: 'Capital projects', lotcip: 'LOTCIP projects', mrp: 'Resurfacing (MRP)', funding: 'Capital funding'}[state.tab];
+  const tabName = {all: 'All projects', capital: 'TIP projects', lotcip: 'LOTCIP projects', mrp: 'Resurfacing (MRP)', funding: 'TIP funding'}[state.tab];
   const phase = $('#phase').value ? $('#phase').selectedOptions[0].textContent : '';
   const items = [
     ['Towns', n ? [...state.selTowns].sort().join(', ') : `All ${state.towns.length} towns`],
@@ -1207,7 +1259,8 @@ function reportFilters(recs) {
     phase && ['Phase / type', phase],
     $('#q').value.trim() && ['Search', '“' + $('#q').value.trim() + '”'],
     $('#extent').checked && state.inTabCount > recs.length && ['Map view', `limited to the current map view (${recs.length} of ${state.inTabCount})`],
-    state.includeMissing && ['Missing dates', 'included']
+    state.includeMissing && ['Missing dates', 'included'],
+    !allScopes() && ['Scope', ['Town', 'Regional', 'Statewide'].filter(k => state.scopes.has(k)).join(', ')]
   ].filter(Boolean);
   return `<div class="rp-filters">${items.map(([k, v]) => `<span><b>${esc(k)}:</b> ${esc(v)}</span>`).join('')}</div>`;
 }
@@ -1218,7 +1271,7 @@ function reportTables(recs) {
   let html = '';
   if (cap.length) {
     const est = cap.reduce((s, r) => s + (r.cost || 0), 0), fund = cap.reduce((s, r) => s + fv(r.fund, 'ProjectTotalFunds'), 0);
-    html += `<div class="rp-section"><h2>Capital projects (${cap.length})</h2><table class="rt"><thead><tr>
+    html += `<div class="rp-section"><h2>TIP projects (${cap.length})</h2><table class="rt"><thead><tr>
       <th style="width:8%">Project</th><th>Title &amp; description</th><th style="width:13%">Towns</th><th style="width:10%">Phase</th>
       <th class="n" style="width:8%">Advertise</th><th class="n" style="width:8%">Est. complete</th><th class="n" style="width:8%">Estimate</th><th class="n" style="width:12%">Funding (fed / state)</th></tr></thead><tbody>
       ${cap.map(r => `<tr><td><b>${esc(r.number)}</b></td><td><b>${esc(r.title)}</b>${r.description ? `<div class="d">${esc(trunc(r.description, 230))}</div>` : ''}</td>
@@ -1250,11 +1303,11 @@ function buildReport(recs, single) {
   const head = `<div class="rp-head">
       <img src="${esc(CONFIG.logoUrl)}" alt="SECOG" onerror="this.outerHTML='&lt;span class=&quot;logo-fallback&quot;&gt;SECOG&lt;/span&gt;'">
       <div><h1>${single ? 'Project summary' : 'Active Transportation Projects'}</h1>
-        <div class="rp-sub">Southeastern Connecticut planning region · CTDOT Capital, LOTCIP and Maintenance Resurfacing projects</div></div>
+        <div class="rp-sub">Southeastern Connecticut planning region · CTDOT TIP, LOTCIP and Maintenance Resurfacing projects</div></div>
       <div class="rp-date">Generated ${esc(now)}<br>${esc($('#refreshed').textContent || '')}</div></div>`;
   const legend = `<div class="rp-legend">
-      <span><span class="sw" style="background:none;border:2px solid ${css('--cap-pre')}"></span>Capital · pre-construction</span>
-      <span><span class="sw" style="background:none;border:2px solid ${css('--cap-con')}"></span>Capital · construction</span>
+      <span><span class="sw" style="background:none;border:2px solid ${css('--cap-pre')}"></span>TIP · pre-construction</span>
+      <span><span class="sw" style="background:none;border:2px solid ${css('--cap-con')}"></span>TIP · construction</span>
       <span><span class="sw" style="background:none;border:2px solid ${css('--lotcip')}"></span>LOTCIP</span>
       <span><span class="sw" style="background:${css('--mrp')};height:3px;width:14px"></span>Resurfacing</span></div>`;
   const note = `<div class="rp-note">Source: CTDOT Active Projects Viewer and Active Projects by Funding Sources (CTDOT open data, PA 24-40). Funding covers the PE, ROW and construction phases from FY2008–2025 budget data; the funding-year chart places each project's total in the fiscal year of its advertise date. Project areas are approximate.</div>`;
@@ -1273,16 +1326,16 @@ function buildReport(recs, single) {
 
   const tiles = [
     [recs.length, 'Projects listed'],
-    [`${cap.length}`, `Capital (${cap.filter(r => r.group === 'Pre-Construction').length} pre-con · ${cap.filter(r => r.group === 'Construction').length} construction)`],
-    [moneyShort(cap.reduce((s, r) => s + (r.cost || 0), 0)), 'Capital total project estimate'],
-    [moneyShort(mx.total), `Capital funding (${funded.length} projects)`],
+    [`${cap.length}`, `TIP (${cap.filter(r => r.group === 'Pre-Construction').length} pre-con · ${cap.filter(r => r.group === 'Construction').length} construction)`],
+    [moneyShort(cap.reduce((s, r) => s + (r.cost || 0), 0)), 'TIP total project estimate'],
+    [moneyShort(mx.total), `TIP funding (${funded.length} projects)`],
     [`${recs.filter(r => r.program === 'lotcip').length}`, 'LOTCIP · ' + moneyShort(recs.filter(r => r.program === 'lotcip').reduce((s, r) => s + (r.cost || 0), 0))],
     [recs.filter(r => r.program === 'mrp').reduce((s, r) => s + (r.laneMiles || 0), 0).toFixed(1), 'Resurfacing lane-miles']
   ];
   const fundBlock = funded.length ? `<div class="rp-fund">
       <h2>Dollars by funding source</h2>${pieSvg(sourceSlices(mx), 'Funding by source')}
       <h2>Dollars by funding year (${state.yearMode === 'FFY' ? 'federal' : 'state'} FY of advertise date)</h2>${pieSvg(yearSlices(funded, state.yearMode), 'Funding by year')}
-    </div>` : `<div class="rp-fund"><h2>Funding</h2><p style="color:#666">No capital projects with funding data in this selection.</p></div>`;
+    </div>` : `<div class="rp-fund"><h2>Funding</h2><p style="color:#666">No TIP projects with funding data in this selection.</p></div>`;
   return `<div class="rp">${head}${reportFilters(recs)}
     <div class="rp-tiles">${tiles.map(([v, l]) => `<div><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('')}</div>
     <div class="rp-grid"><div><div class="rp-map">${reportMapSvg(recs)}</div>${legend}</div>${fundBlock}</div>
@@ -1309,7 +1362,7 @@ function toCSV(recs) {
   const cols = [
     ['Program', r => r.programLabel], ['Project Number', r => r.number], ['Title', r => r.title],
     ['Phase / Status', r => r.phase], ['Group / Type / Year', r => r.group], ['Towns in Region', r => r.towns.join('; ')],
-    ['All Towns', r => r.a.Towns || ''], ['Routes', r => r.routes], ['Scope', r => r.scope],
+    ['All Towns', r => r.a.Towns || ''], ['Routes', r => r.routes], ['Scope', r => r.scopeClass], ['CTDOT District ID', r => r.program === 'capital' ? (r.a.DistrictID || '') : ''],
     ['Total Estimate / Application Cost', r => r.cost ?? ''], ['Construction Estimate', r => r.a.CurrentConstructionEstimate ?? ''],
     ['PE Spent', r => r.a.PEexpenditures ?? ''], ['ROW Spent', r => r.a.ROWExpenditures ?? ''], ['Construction Spent', r => r.a.ConstructionExpenditures ?? ''],
     ['Design % Complete', r => r.a.DesignPercentComplete ?? ''],
@@ -1353,6 +1406,22 @@ document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click
 let qTimer;
 $('#q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(render, 150); });
 $('#phase').addEventListener('change', render);
+function syncURL() {
+  try {
+    const u = new URL(location.href);
+    if (state.selTowns.size) u.searchParams.set('towns', [...state.selTowns].sort().join(',')); else u.searchParams.delete('towns');
+    if (!allScopes()) u.searchParams.set('scope', ['Town', 'Regional', 'Statewide'].filter(k => state.scopes.has(k)).join(',')); else u.searchParams.delete('scope');
+    history.replaceState(null, '', u);
+  } catch (e) { /* file:// or sandboxed */ }
+}
+document.querySelector('.scope').addEventListener('click', e => {
+  const b = e.target.closest('[data-scope]'); if (!b) return;
+  const k = b.dataset.scope;
+  if (state.scopes.has(k)) { if (state.scopes.size > 1) state.scopes.delete(k); }   // keep at least one on
+  else state.scopes.add(k);
+  syncURL();
+  render();
+});
 $('#extent').addEventListener('change', render);
 $('#missing').addEventListener('change', e => { state.includeMissing = e.target.checked; rebuildPhaseOptions(); render(); });
 /* ---------- town picker (one or many towns; none ticked = whole region) ---------- */
@@ -1386,11 +1455,7 @@ function styleTowns(skipFit) {
 function applyTowns() {
   if (state.selTowns.size === state.towns.length) state.selTowns.clear();   // all ticked = whole region
   updateTownLabel();
-  try {
-    const u = new URL(location.href);
-    if (state.selTowns.size) u.searchParams.set('towns', [...state.selTowns].sort().join(',')); else u.searchParams.delete('towns');
-    history.replaceState(null, '', u);
-  } catch (e) { /* file:// or sandboxed */ }
+  syncURL();
   styleTowns();
   render();
 }
@@ -1479,8 +1544,12 @@ async function start(region) {
 }
 
 (() => {
-  const t = new URLSearchParams(location.search).get('towns');
+  const qs = new URLSearchParams(location.search);
+  const t = qs.get('towns');
   if (t) t.split(',').map(x => x.trim()).filter(Boolean).forEach(x => state.selTowns.add(x));
+  const sc = (qs.get('scope') || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+  const picked = ['Town', 'Regional', 'Statewide'].filter(k => sc.includes(k.toLowerCase()));
+  if (picked.length) state.scopes = new Set(picked);
   start(CONFIG.region);
 })();
 </script>

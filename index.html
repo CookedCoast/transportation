@@ -424,7 +424,7 @@ dl.kv dd a{color:var(--blue)}
 </header>
 
 <section class="kpis" aria-label="Summary">
-  <div class="kpi"><div class="v" id="k-pre">–</div><div class="l"><span class="sym poly" style="color:var(--strong)"></span>TIP projects (FHWA)</div></div>
+  <div class="kpi"><div class="v" id="k-pre">–</div><div class="l"><span class="sym poly" style="color:var(--strong)"></span>TIP projects (FHWA / FTA)</div></div>
   <div class="kpi"><div class="v" id="k-con">–</div><div class="l"><span class="sym poly dash" style="color:var(--strong)"></span>Non-TIP capital projects</div></div>
   <div class="kpi"><div class="v" id="k-capest">–</div><div class="l">Capital total project estimate</div></div>
   <div class="kpi"><div class="v" id="k-lot">–</div><div class="l"><span class="sym poly" style="color:var(--lotcip)"></span>LOTCIP projects</div></div>
@@ -436,8 +436,8 @@ dl.kv dd a{color:var(--blue)}
   <aside>
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="all" aria-selected="true">All<span class="n" id="n-all"></span></button>
-      <button role="tab" data-tab="tip" aria-selected="false" title="Capital projects with FHWA funding listed in CTDOT's funding report (current and past TIPs, plus Bridge and Safety list projects included by reference)">TIP<span class="n" id="n-tip"></span></button>
-      <button role="tab" data-tab="nontip" aria-selected="false" title="Capital projects with no FHWA funding listed, or not in CTDOT's funding report">Non-TIP<span class="n" id="n-nontip"></span></button>
+      <button role="tab" data-tab="tip" aria-selected="false" title="Capital projects with FHWA or FTA funding listed in CTDOT's funding report (current and past TIPs, plus Bridge and Safety list projects included by reference)">TIP<span class="n" id="n-tip"></span></button>
+      <button role="tab" data-tab="nontip" aria-selected="false" title="Capital projects with no FHWA or FTA funding listed, or not in CTDOT's funding report">Non-TIP<span class="n" id="n-nontip"></span></button>
       <button role="tab" data-tab="lotcip" aria-selected="false">LOTCIP<span class="n" id="n-lotcip"></span></button>
       <button role="tab" data-tab="mrp" aria-selected="false">Paving<span class="n" id="n-mrp"></span></button>
       <button role="tab" data-tab="funding" aria-selected="false" title="Capital projects in CTDOT's funding-by-source report (PA 24-40)">Funding<span class="n" id="n-funding"></span></button>
@@ -523,7 +523,7 @@ const CONFIG = {
   // A capital project is a TIP project when CTDOT's funding report lists any of these sources for it
   // (labels from FUND_SOURCES). This picks up current and past TIP projects, and Bridge and Safety
   // list projects that the TIP includes by reference.
-  tipSources: ['FHWA'],
+  tipSources: ['FHWA', 'FTA'],
   // Quick-pick advertise fiscal-year ranges (TIP periods)
   fyPresets: [[2025, 2028], [2027, 2030]]
 };
@@ -747,7 +747,7 @@ function scopeOf(r) {
   const n = new Set(all.map(t => String(t).toLowerCase())).size;
   return n >= CONFIG.statewideTownCount ? 'Statewide' : n > 1 ? 'Regional' : 'Town';
 }
-// TIP = CTDOT's funding report lists FHWA (CONFIG.tipSources) money for the project, in any phase
+// TIP = CTDOT's funding report lists FHWA or FTA (CONFIG.tipSources) money for the project, in any phase
 function isTip(r) {
   if (!r.fund) return false;
   return FUND_SOURCES.filter(s => CONFIG.tipSources.includes(s.label))
@@ -1457,6 +1457,7 @@ function toCSV(recs) {
     ['Advertise FFY', r => r.fy.FFY ?? ''],
     ['Advertise SFY', r => r.fy.SFY ?? ''],
     ['Funds: FHWA', r => r.fund ? fv(r.fund, 'PEFederalFHWA') + fv(r.fund, 'ROWFHWA') + fv(r.fund, 'CNFHWA') : ''],
+    ['Funds: FTA', r => r.fund ? fv(r.fund, 'PEFederalFTA') + fv(r.fund, 'ROWFTA') + fv(r.fund, 'CNFTA') : ''],
     ['Funds: Total', r => r.fund ? fv(r.fund, 'ProjectTotalFunds') : ''],
     ['Funds: Federal', r => r.fund ? fv(r.fund, 'FederalTotalFunds') : ''],
     ['Funds: State', r => r.fund ? fv(r.fund, 'StateTotalFunds') : ''],

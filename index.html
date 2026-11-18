@@ -72,6 +72,8 @@ header{display:flex;align-items:stretch;background:var(--panel);border-bottom:1p
 .kpi{background:var(--panel);padding:10px 18px}
 .kpi .v{font:600 24px/1.15 "Golos Text",sans-serif;color:var(--strong);font-variant-numeric:tabular-nums}
 .kpi .l{font-size:12px;color:var(--ink-3);display:flex;align-items:center;gap:6px}
+.kpi .s{font-size:11.5px;color:var(--ink-3);margin-top:1px;font-variant-numeric:tabular-nums}
+.kpi .s b{color:var(--strong);font-weight:600}
 .sym{flex:none;display:inline-block}
 .sym.poly{width:11px;height:11px;border:2px solid currentColor;border-radius:2px}
 .sym.poly.dash{border-style:dashed}
@@ -431,7 +433,7 @@ dl.kv dd a{color:var(--blue)}
 </header>
 
 <section class="kpis" aria-label="Summary">
-  <div class="kpi"><div class="v" id="k-pre">–</div><div class="l"><span class="sym poly" style="color:var(--strong)"></span>TIP projects</div></div>
+  <div class="kpi" id="k-tip"><div class="v" id="k-pre">–</div><div class="l"><span class="sym poly" style="color:var(--strong)"></span>TIP projects</div><div class="s" id="k-pre-s"></div></div>
   <div class="kpi"><div class="v" id="k-con">–</div><div class="l"><span class="sym poly dash" style="color:var(--strong)"></span>Non-TIP capital projects</div></div>
   <div class="kpi"><div class="v" id="k-capest">–</div><div class="l">Capital total project estimate</div></div>
   <div class="kpi"><div class="v" id="k-lot">–</div><div class="l"><span class="sym poly" style="color:var(--lotcip)"></span>LOTCIP projects</div></div>
@@ -442,8 +444,8 @@ dl.kv dd a{color:var(--blue)}
 <main>
   <aside>
     <div class="tabs" role="tablist">
-      <button role="tab" data-tab="all" aria-selected="true">All<span class="n" id="n-all"></span></button>
-      <button role="tab" data-tab="tip" aria-selected="false" title="Capital projects listed in SECOG's TIP (eco interactive lists), plus Bridge and Safety list projects included by reference (FHWA or FTA funding in CTDOT's funding report)">TIP<span class="n" id="n-tip"></span></button>
+      <button role="tab" data-tab="tip" aria-selected="true" title="Capital projects listed in SECOG's TIP (eco interactive lists), plus Bridge and Safety list projects included by reference (FHWA or FTA funding in CTDOT's funding report)">TIP<span class="n" id="n-tip"></span></button>
+      <button role="tab" data-tab="all" aria-selected="false">All<span class="n" id="n-all"></span></button>
       <button role="tab" data-tab="nontip" aria-selected="false" title="Capital projects not in the TIP lists and with no FHWA or FTA funding in CTDOT's funding report">Non-TIP<span class="n" id="n-nontip"></span></button>
       <button role="tab" data-tab="lotcip" aria-selected="false">LOTCIP<span class="n" id="n-lotcip"></span></button>
       <button role="tab" data-tab="mrp" aria-selected="false">Paving<span class="n" id="n-mrp"></span></button>
@@ -702,7 +704,7 @@ function yearSlices(recs, mode) {
    ===================================================================== */
 const state = {
   region: null, towns: [], townGeo: null, records: [],
-  tab: 'all', selectedId: null, includeMissing: false,
+  tab: 'tip', selectedId: null, includeMissing: false,
   selTowns: new Set(),     // empty = all towns in the region
   scopes: new Set(['Town', 'Regional', 'Statewide']),   // scope filter; all on = no filtering
   tipLists: [],            // [{file, label, lines}] from the eco interactive CSVs
@@ -1144,13 +1146,21 @@ function render() {
   // tab counts and KPIs follow the filters (not the map extent)
   const byProg = p => pre.filter(r => r.program === p);
   $('#n-all').textContent = pre.length;
-  $('#n-tip').textContent = pre.filter(tabMatch('tip')).length;
+  // TIP total = mapped TIP projects + TIP line items with no mapped project (same filters)
+  const tipMapped = pre.filter(tabMatch('tip')), tipItems = visibleTipItems();
+  $('#n-tip').textContent = tipMapped.length + tipItems.length;
   $('#n-nontip').textContent = pre.filter(tabMatch('nontip')).length;
   $('#n-lotcip').textContent = byProg('lotcip').length;
   $('#n-mrp').textContent = byProg('mrp').length;
   $('#n-funding').textContent = state.fundingOK ? byProg('capital').filter(r => r.fund).length : '';
   const cap = byProg('capital');
-  $('#k-pre').textContent = cap.filter(r => r.tip).length;
+  const listed = tipMapped.filter(r => r.tipCycles.length).length, byRef = tipMapped.length - listed;
+  $('#k-pre').textContent = tipMapped.length + tipItems.length;
+  $('#k-pre-s').innerHTML = `<b>${tipMapped.length}</b> mapped · <b>${tipItems.length}</b> not mapped`;
+  $('#k-tip').title = `${tipMapped.length + tipItems.length} TIP projects and line items:\n` +
+    `${listed} listed in the TIP and mapped\n${byRef} by reference (FHWA/FTA funding) and mapped\n` +
+    `${tipItems.length} listed but not mapped (statewide programs, transit grants, projects not in CTDOT's map data)` +
+    (state.selTowns.size || fyActive() ? '\nUnmapped items are left out while a town or FY filter is set.' : '');
   $('#k-con').textContent = cap.filter(r => !r.tip).length;
   $('#k-capest').textContent = moneyShort(cap.reduce((s, r) => s + (r.cost || 0), 0));
   const lot = byProg('lotcip');

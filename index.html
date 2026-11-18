@@ -103,6 +103,13 @@ input[type=checkbox]{accent-color:var(--blue)}
 #list li{padding:10px 16px 10px 13px;border-bottom:1px solid var(--line-2);cursor:pointer;border-left:3px solid transparent}
 #list li:hover{background:var(--hover)}
 #list li.sel{background:var(--sel)}
+#list li.sect{cursor:default;background:var(--hover);border-left:0;padding:12px 16px 10px}
+#list li.sect:hover{background:var(--hover)}
+#list li.sect h3{margin:0;font-size:12px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em}
+#list li.sect p{margin:4px 0 0;font-size:12px;color:var(--ink-3)}
+#list li.item{cursor:default;border-left-color:var(--line)}
+#list li.item:hover{background:none}
+.badge{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;background:var(--green);color:#fff}
 #list .t{font-weight:600;font-size:13.5px;line-height:1.3;color:var(--ink)}
 #list .m{font-size:12px;color:var(--ink-3);margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 10px}
 #list .pn{font-variant-numeric:tabular-nums;color:var(--ink-2);font-weight:500}
@@ -424,7 +431,7 @@ dl.kv dd a{color:var(--blue)}
 </header>
 
 <section class="kpis" aria-label="Summary">
-  <div class="kpi"><div class="v" id="k-pre">–</div><div class="l"><span class="sym poly" style="color:var(--strong)"></span>TIP projects (FHWA / FTA)</div></div>
+  <div class="kpi"><div class="v" id="k-pre">–</div><div class="l"><span class="sym poly" style="color:var(--strong)"></span>TIP projects</div></div>
   <div class="kpi"><div class="v" id="k-con">–</div><div class="l"><span class="sym poly dash" style="color:var(--strong)"></span>Non-TIP capital projects</div></div>
   <div class="kpi"><div class="v" id="k-capest">–</div><div class="l">Capital total project estimate</div></div>
   <div class="kpi"><div class="v" id="k-lot">–</div><div class="l"><span class="sym poly" style="color:var(--lotcip)"></span>LOTCIP projects</div></div>
@@ -436,8 +443,8 @@ dl.kv dd a{color:var(--blue)}
   <aside>
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="all" aria-selected="true">All<span class="n" id="n-all"></span></button>
-      <button role="tab" data-tab="tip" aria-selected="false" title="Capital projects with FHWA or FTA funding listed in CTDOT's funding report (current and past TIPs, plus Bridge and Safety list projects included by reference)">TIP<span class="n" id="n-tip"></span></button>
-      <button role="tab" data-tab="nontip" aria-selected="false" title="Capital projects with no FHWA or FTA funding listed, or not in CTDOT's funding report">Non-TIP<span class="n" id="n-nontip"></span></button>
+      <button role="tab" data-tab="tip" aria-selected="false" title="Capital projects listed in SECOG's TIP (eco interactive lists), plus Bridge and Safety list projects included by reference (FHWA or FTA funding in CTDOT's funding report)">TIP<span class="n" id="n-tip"></span></button>
+      <button role="tab" data-tab="nontip" aria-selected="false" title="Capital projects not in the TIP lists and with no FHWA or FTA funding in CTDOT's funding report">Non-TIP<span class="n" id="n-nontip"></span></button>
       <button role="tab" data-tab="lotcip" aria-selected="false">LOTCIP<span class="n" id="n-lotcip"></span></button>
       <button role="tab" data-tab="mrp" aria-selected="false">Paving<span class="n" id="n-mrp"></span></button>
       <button role="tab" data-tab="funding" aria-selected="false" title="Capital projects in CTDOT's funding-by-source report (PA 24-40)">Funding<span class="n" id="n-funding"></span></button>
@@ -445,7 +452,11 @@ dl.kv dd a{color:var(--blue)}
     <div class="filters">
       <input class="full" type="search" id="q" placeholder="Search project number, title, route, description…" aria-label="Search projects">
       <select id="phase" class="full" aria-label="Phase or status"><option value="">All phases / statuses</option></select>
-      <div class="scope full" role="group" aria-label="Project scope">
+      <div class="scope tipf full" id="tipf" role="group" aria-label="TIP list" hidden>
+        <span class="s-lab" title="TIP cycle the project is listed in (eco interactive), or by reference through FHWA/FTA funding">TIP</span>
+        <span id="tipf-chips" style="display:contents"></span>
+      </div>
+      <div class="scope full" id="scopef" role="group" aria-label="Project scope">
         <span class="s-lab">Scope</span>
         <button type="button" data-scope="Town" aria-pressed="true" title="Projects in a single town">Town<span class="n" id="n-s-Town"></span></button>
         <button type="button" data-scope="Regional" aria-pressed="true" title="Projects covering several towns, or a CTDOT district-wide program">Regional<span class="n" id="n-s-Regional"></span></button>
@@ -491,6 +502,7 @@ dl.kv dd a{color:var(--blue)}
   <span>Southeastern Connecticut Council of Governments · Metropolitan Planning Organization</span>
   <span>Data: <a href="https://maps-ctdot.hub.arcgis.com/apps/ec4af08e038841fba862db805a9f6c70/explore" target="_blank" rel="noopener">CTDOT Active Projects Viewer</a> and <a href="https://maps-ctdot.hub.arcgis.com/apps/13d67ab4c9e64c17b4011c76704a6cf8/explore" target="_blank" rel="noopener">Active Projects by Funding Sources</a> (PA 24-40; PE, ROW, CN; FY2008–2025 budget data).</span>
   <span id="refreshed"></span>
+  <span id="tipinfo"></span>
   <span>Project areas are approximate; LOTCIP outlines are not exact limits.</span>
 </footer>
 
@@ -523,7 +535,9 @@ const CONFIG = {
   // A capital project is a TIP project when CTDOT's funding report lists any of these sources for it
   // (labels from FUND_SOURCES). This picks up current and past TIP projects, and Bridge and Safety
   // list projects that the TIP includes by reference.
-  tipSources: ['FHWA', 'FTA'],
+  tipSources: ['FHWA', 'FTA'],   // capital projects with these funds count as TIP "by reference"
+  // TIP lists exported from eco interactive, one CSV per TIP cycle. See data/README.md for the monthly update.
+  tipListsManifest: 'data/tip-lists.json',
   // Quick-pick advertise fiscal-year ranges (TIP periods)
   fyPresets: [[2025, 2028], [2027, 2030]]
 };
@@ -691,6 +705,10 @@ const state = {
   tab: 'all', selectedId: null, includeMissing: false,
   selTowns: new Set(),     // empty = all towns in the region
   scopes: new Set(['Town', 'Regional', 'Statewide']),   // scope filter; all on = no filtering
+  tipLists: [],            // [{file, label, lines}] from the eco interactive CSVs
+  tipCycles: [],           // cycle labels present, e.g. ['25–28', '27–30']
+  tipSel: null,            // TIP chip filter: null = all, else Set of cycle labels and/or 'ref'
+  tipItems: [],            // TIP line items with no mapped CTDOT project
   detailTab: 'overview',   // last-used tab in the project panel
   yearMode: 'FFY',         // fiscal-year basis for the FY filter and funding-year pie: 'FFY' or 'SFY'
   fy: {from: null, to: null}   // advertise fiscal-year range filter; null = open-ended
@@ -747,14 +765,99 @@ function scopeOf(r) {
   const n = new Set(all.map(t => String(t).toLowerCase())).size;
   return n >= CONFIG.statewideTownCount ? 'Statewide' : n > 1 ? 'Regional' : 'Town';
 }
-// TIP = CTDOT's funding report lists FHWA or FTA (CONFIG.tipSources) money for the project, in any phase
+/* ---------- TIP lists (eco interactive exports) ---------- */
+// CSV or tab-separated text -> array of rows; handles quoted fields with commas, quotes and line breaks
+function parseDelimited(text) {
+  text = String(text).replace(/^\ufeff/, '');
+  const head = text.split(/\r?\n/, 1)[0];
+  const d = (head.match(/\t/g) || []).length > (head.match(/,/g) || []).length ? '\t' : ',';
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"' && f === '') q = true;
+    else if (c === d) { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(v => String(v).trim() !== ''));
+}
+const cycleStart = c => parseInt(c, 10) || 0;
+const sortCycles = a => a.slice().sort((x, y) => cycleStart(x) - cycleStart(y));
+// "Southeastern CT / 27-30 TIP" -> "27–30"
+const cycleFromText = t => { const m = String(t || '').match(/(\d{2})\s*-\s*(\d{2})\s*TIP/i) || String(t || '').match(/20(\d{2})\s*-\s*20(\d{2})/); return m ? m[1] + '–' + m[2] : null; };
+async function loadTipLists() {
+  const man = await fetch(CONFIG.tipListsManifest, {cache: 'no-cache'}).then(r => { if (!r.ok) throw new Error('TIP list manifest ' + r.status); return r.json(); });
+  return Promise.all((man.lists || []).map(async L => {
+    const txt = await fetch(L.file, {cache: 'no-cache'}).then(r => { if (!r.ok) throw new Error(L.file + ' ' + r.status); return r.text(); });
+    const rows = parseDelimited(txt);
+    const hdr = (rows[0] || []).map(h => String(h).trim().toLowerCase());
+    const col = (...names) => hdr.findIndex(h => names.includes(h));
+    const ci = {id: col('id', 'project number', 'project id', 'projectnumber'), agency: col('agency'), status: col('review status', 'status'),
+                cycle: col('plan cycle', 'cycle'), rev: col('revision'), title: col('title', 'project title'), type: col('type', 'funding type'),
+                cost: col('total cost', 'cost', 'total')};
+    if (ci.id < 0) throw new Error(L.file + ': no ID column');
+    const fileCycle = L.label || cycleFromText(L.file);
+    const lines = rows.slice(1).map(r => {
+      const g = k => ci[k] >= 0 ? String(r[ci[k]] == null ? '' : r[ci[k]]).trim() : '';
+      return {id: g('id').toUpperCase(), agency: g('agency'), status: g('status'), planCycle: g('cycle'), revision: g('rev'),
+              title: g('title'), type: g('type'), cost: parseFloat(g('cost').replace(/[^0-9.\-]/g, '')) || 0};
+    }).filter(x => x.id && x.id !== 'GRAND TOTAL');
+    lines.forEach(x => { x.cycle = cycleFromText(x.planCycle) || fileCycle || '?'; });
+    return {file: L.file, label: fileCycle || sortCycles([...new Set(lines.map(x => x.cycle))]).join(', ') || L.file, lines};
+  }));
+}
+// eco ID -> CTDOT project number it can match. Suffixed IDs (0414-0073CN) match their base number;
+// year-coded grants (0170-2027AD) and program codes (0170-BRDG, PVMT-MARK) never match a mapped project.
+function tipKey(id) {
+  if (/^\d{4}-\d{4}$/.test(id)) return id;
+  if (/^\d{4}-\d{4}[A-Z]{1,3}$/.test(id) && !/^\d{4}-20\d{2}[A-Z]{2}$/.test(id)) return id.slice(0, 9);
+  return null;
+}
+function classifyTip() {
+  const idx = new Map();
+  for (const L of state.tipLists) for (const x of L.lines) {
+    const k = tipKey(x.id); if (!k) continue;
+    if (!idx.has(k)) idx.set(k, []);
+    idx.get(k).push(x);
+  }
+  const mapped = new Set();
+  for (const r of state.records) {
+    if (r.program !== 'capital') continue;
+    r.tipLines = idx.get(r.number) || [];
+    if (r.tipLines.length) mapped.add(r.number);
+    r.tipCycles = sortCycles([...new Set(r.tipLines.map(x => x.cycle))]);
+    r.tipRef = isTip(r);
+    r.tip = r.tipCycles.length > 0 || r.tipRef;
+    r.tipCats = r.tipCycles.length ? r.tipCycles : (r.tipRef ? ['ref'] : []);
+    r.programLabel = r.tip ? 'TIP' : 'Non-TIP Capital';
+  }
+  // TIP line items with no mapped project in the region: statewide programs, transit grants, etc.
+  const items = new Map();
+  for (const L of state.tipLists) for (const x of L.lines) {
+    const k = tipKey(x.id);
+    if (k && mapped.has(k)) continue;
+    if (!items.has(x.id)) items.set(x.id, {id: x.id, lines: []});
+    items.get(x.id).lines.push(x);
+  }
+  state.tipItems = [...items.values()].map(it => {
+    const latest = it.lines.slice().sort((a, b) => cycleStart(b.cycle) - cycleStart(a.cycle))[0];
+    return Object.assign(it, {cycles: sortCycles([...new Set(it.lines.map(x => x.cycle))]), title: latest.title, type: latest.type,
+                              cost: latest.cost, status: latest.status, revision: latest.revision});
+  }).sort((a, b) => a.id.localeCompare(b.id));
+  state.tipCycles = sortCycles([...new Set(state.tipLists.flatMap(L => L.lines.map(x => x.cycle)))]);
+}
+const tipCycleText = r => r.tipCycles && r.tipCycles.length ? 'TIP ' + r.tipCycles.join(' · ') : r.tipRef ? 'TIP (by ref.)' : 'Non-TIP';
+// FHWA/FTA money in CTDOT's funding report (CONFIG.tipSources) = TIP by reference
 function isTip(r) {
   if (!r.fund) return false;
   return FUND_SOURCES.filter(s => CONFIG.tipSources.includes(s.label))
     .some(s => FUND_PHASES.some(p => fv(r.fund, s.f[p.key]) > 0));
 }
 function tipStatusText(r) {
-  if (r.tip) return 'TIP — ' + CONFIG.tipSources.join(' / ') + ' funding listed';
+  if (r.tipCycles && r.tipCycles.length) return 'TIP ' + r.tipCycles.join(', ') + ' (listed in eco interactive)';
+  if (r.tip) return 'TIP by reference — ' + CONFIG.tipSources.join(' / ') + ' funding listed, not individually listed in the TIP';
   return r.fund ? 'Non-TIP — no ' + CONFIG.tipSources.join(' / ') + ' funding listed'
                 : 'Non-TIP — not in CTDOT’s funding report, so TIP status can’t be confirmed';
 }
@@ -891,11 +994,18 @@ async function loadRegion(region) {
 
   state.records = caps.concat(lot.map(lotcipRecord), mrp.map(f => mrpRecord(f, state.towns)));
   state.records.forEach(r => { r.towns = r.towns.filter(t => state.towns.includes(t)).length ? r.towns.filter(t => state.towns.includes(t)) : r.towns; });
+  setStatus('Loading TIP lists…');
+  try { state.tipLists = await state.tipLoad; state.tipListsOK = true; }
+  catch (e) { console.warn('TIP lists unavailable', e); state.tipLists = []; state.tipListsOK = false; }
+  classifyTip();
+  if (state.tipCycles.length) CONFIG.fyPresets = state.tipCycles.map(c => c.split('–').map(y => 2000 + +y));
+  $('#tipinfo').textContent = state.tipListsOK
+    ? 'TIP lists: ' + state.tipLists.map(L => L.label + ' (' + L.lines.length + ' items)').join(', ') + ', from eco interactive.'
+    : 'TIP lists could not be loaded; TIP shown by funding only.';
+  buildTipChips();
   state.records.forEach(r => {
     r.scopeClass = scopeOf(r);
     if (r.program === 'capital') {
-      r.tip = isTip(r);
-      r.programLabel = r.tip ? 'TIP' : 'Non-TIP Capital';
       const adv = advDate(r);
       r.fy = {FFY: fiscalYear(adv, 'FFY'), SFY: fiscalYear(adv, 'SFY')};
     } else {
@@ -975,12 +1085,14 @@ function rebuildPhaseOptions() {
 
 const allScopes = () => state.scopes.size === 3;
 const fyActive = () => !!(state.fy.from || state.fy.to);
-function baseFiltered(ignoreScope, ignoreFy) {
+function baseFiltered(ignoreScope, ignoreFy, ignoreTip) {
   const q = $('#q').value.trim().toLowerCase();
   const phase = $('#phase').value, sel = state.selTowns;
   return state.records.filter(r => {
     if (!ignoreScope && !state.scopes.has(r.scopeClass)) return false;
-    if (r.program === 'capital' && !state.includeMissing && CONFIG.missingDatePhases.includes(r.phaseRaw)) return false;
+    // projects listed in a TIP stay visible even when CTDOT lists them as "missing dates"
+    if (r.program === 'capital' && !state.includeMissing && CONFIG.missingDatePhases.includes(r.phaseRaw) && !(r.tipCycles && r.tipCycles.length)) return false;
+    if (!ignoreTip && state.tipSel && r.program === 'capital' && r.tip && !r.tipCats.some(c => state.tipSel.has(c))) return false;
     if (!ignoreFy && fyActive()) {
       const y = r.fy[state.yearMode];
       if (y == null) return false;                      // no advertise date (all LOTCIP and paving)
@@ -1014,6 +1126,7 @@ function updateScopeChips() {
 }
 function render() {
   updateScopeChips();
+  updateTipChips();
   const pre = baseFiltered();                         // filters except tab + extent
   const inTab = pre.filter(tabMatch(state.tab));
   updateFyNote(pre);
@@ -1054,26 +1167,72 @@ function render() {
   state.inTabCount = inTab.length;
   updateViewToggle();
 
-  $('#listcount').textContent = list.length + ' of ' + inTab.length + ' project' + (inTab.length === 1 ? '' : 's') + ($('#extent').checked && list.length < inTab.length ? ' in view' : '');
+  const items = state.tab === 'tip' ? visibleTipItems() : [];
+  state.visibleItems = items;
+  $('#listcount').textContent = list.length + ' of ' + inTab.length + ' project' + (inTab.length === 1 ? '' : 's') + ($('#extent').checked && list.length < inTab.length ? ' in view' : '') + (items.length ? ' · ' + items.length + ' not mapped' : '');
   const ul = $('#list');
   if (state.tab === 'funding') { renderFunding(list, ul); return; }
-  if (!list.length) {
+  if (!list.length && !items.length) {
     ul.innerHTML = `<li class="empty">${inTab.length ? 'No projects in the current map view. Zoom out or untick “List only what’s in map view”.' : 'No projects match these filters.'}</li>`;
     return;
   }
-  ul.innerHTML = list.map(r => `
+  ul.innerHTML = (list.length ? '' : `<li class="empty">${inTab.length ? 'No mapped projects in the current map view.' : 'No mapped projects match these filters.'}</li>`) + list.map(r => `
     <li data-id="${r.id}" class="${r.id === state.selectedId ? 'sel' : ''}" style="border-left-color:${colorFor(r)}">
       <div class="t">${esc(r.title)}</div>
       <div class="m">
         <span class="pn">${esc(r.number)}</span>
-        <span class="chip">${esc(r.programLabel)}${r.program === 'capital' ? ' · ' + esc(r.phase) : r.program === 'mrp' ? ' · ' + esc(r.phase) : ''}</span>
-        ${r.program === 'capital' && !r.fund && state.fundingOK ? '<span title="Not in CTDOT’s funding report, so TIP status can’t be confirmed">no funding data</span>' : ''}
+        <span class="chip">${r.program === 'capital' ? esc(tipCycleText(r)) + ' · ' + esc(r.phase) : esc(r.programLabel) + (r.program === 'mrp' ? ' · ' + esc(r.phase) : '')}</span>
+        ${r.program === 'capital' && r.tipCycles.length > 1 ? '<span class="badge" title="Listed in more than one TIP cycle">rollover</span>' : ''}
+        ${r.program === 'capital' && !r.tip && !r.fund && state.fundingOK ? '<span title="Not in the TIP lists or CTDOT’s funding report">no funding data</span>' : ''}
         ${fyActive() && r.fy[state.yearMode] ? `<span>${state.yearMode} ${r.fy[state.yearMode]}</span>` : ''}
         <span>${esc(r.towns.slice(0, 4).join(', '))}${r.towns.length > 4 ? ' +' + (r.towns.length - 4) : ''}</span>
         ${r.cost ? `<span>${moneyShort(r.cost)}</span>` : ''}
         ${r.program === 'mrp' && r.laneMiles ? `<span>${r.laneMiles} lane-mi</span>` : ''}
       </div>
-    </li>`).join('');
+    </li>`).join('') + tipItemsHtml(items);
+}
+
+/* ---------- TIP chips + unmapped TIP line items ---------- */
+const tipCatLabel = c => c === 'ref' ? 'By reference' : c;
+function buildTipChips() {
+  const cats = state.tipCycles.concat(['ref']);
+  $('#tipf-chips').innerHTML = cats.map(c => `<button type="button" data-tipc="${esc(c)}" aria-pressed="true"
+      title="${c === 'ref' ? 'Not listed individually in the TIP; FHWA or FTA funding in CTDOT’s funding report (Bridge and Safety list projects)' : 'Listed in the ' + esc(c) + ' TIP'}">${esc(tipCatLabel(c))}<span class="n"></span></button>`).join('');
+  if (state.tipSel) state.tipSel = new Set([...state.tipSel].filter(c => cats.includes(c)));
+  if (state.tipSel && (!state.tipSel.size || state.tipSel.size === cats.length)) state.tipSel = null;
+}
+function updateTipChips() {
+  const el = $('#tipf');
+  el.hidden = !['all', 'tip', 'funding'].includes(state.tab) || !state.records.length;
+  if (el.hidden) return;
+  const pool = baseFiltered(false, false, true).filter(tabMatch(state.tab)).filter(r => r.program === 'capital' && r.tip);
+  const items = state.tab === 'tip' ? visibleTipItems(true) : [];
+  el.querySelectorAll('[data-tipc]').forEach(b => {
+    const c = b.dataset.tipc;
+    b.setAttribute('aria-pressed', !state.tipSel || state.tipSel.has(c));
+    b.querySelector('.n').textContent = pool.filter(r => r.tipCats.includes(c)).length + items.filter(it => it.cycles.includes(c)).length;
+  });
+}
+function visibleTipItems(ignoreTipSel) {
+  // unmapped items have no town or advertise date, so they drop out when either filter is set
+  if (state.selTowns.size || fyActive()) return [];
+  const q = $('#q').value.trim().toLowerCase();
+  return state.tipItems.filter(it => {
+    if (!ignoreTipSel && state.tipSel && !it.cycles.some(c => state.tipSel.has(c))) return false;
+    if (q && !(it.id + ' ' + it.title + ' ' + it.type).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function tipItemsHtml(items) {
+  if (!items.length) return '';
+  const total = items.reduce((t, it) => t + it.cost, 0);
+  return `<li class="sect"><h3>TIP line items not on the map (${items.length})</h3>
+      <p>Statewide programs, transit grants and other TIP items with no mapped CTDOT project in the region. ${moneyShort(total)} total cost (latest TIP cycle each, from eco interactive).</p></li>` +
+    items.map(it => `<li class="item">
+      <div class="t">${esc(it.title)}</div>
+      <div class="m"><span class="pn">${esc(it.id)}</span><span class="chip">TIP ${esc(it.cycles.join(' · '))}</span>
+        ${it.cycles.length > 1 ? '<span class="badge">rollover</span>' : ''}<span>${esc(it.type)}</span><span>${moneyShort(it.cost)}</span>
+        ${it.status && it.status !== 'Accepted' ? `<span>${esc(it.status)}</span>` : ''}</div></li>`).join('');
 }
 
 function renderFunding(list, ul) {
@@ -1108,7 +1267,7 @@ function renderFunding(list, ul) {
     const seg = (v, c) => v ? `<span style="width:${v / t * 100}%;background:${c}"></span>` : '';
     return `<li data-id="${r.id}" class="${r.id === state.selectedId ? 'sel' : ''}" style="border-left-color:${colorFor(r)}">
       <div class="t">${esc(r.title)}</div>
-      <div class="m"><span class="pn">${esc(r.number)}</span><span class="chip">${r.tip ? 'TIP' : 'Non-TIP'} · ${esc(r.phase)}</span>
+      <div class="m"><span class="pn">${esc(r.number)}</span><span class="chip">${esc(tipCycleText(r))} · ${esc(r.phase)}</span>
         <span>${esc(r.towns.slice(0, 3).join(', '))}${r.towns.length > 3 ? ' +' + (r.towns.length - 3) : ''}</span>
         <span><b>${moneyShort(fv(f, 'ProjectTotalFunds'))}</b> · Fed ${moneyShort(fv(f, 'FederalTotalFunds'))} / State ${moneyShort(fv(f, 'StateTotalFunds'))}</span>
         ${r.fy[state.yearMode] ? `<span>${state.yearMode} ${r.fy[state.yearMode]}</span>` : ''}</div>
@@ -1147,6 +1306,8 @@ function detailBody(r, tab) {
       return (r.description ? `<p>${esc(r.description)}</p>` : '') +
         sec('Status', kv([
           ['TIP status', esc(tipStatusText(r))],
+          ...r.tipLines.slice().sort((x, y) => cycleStart(x.cycle) - cycleStart(y.cycle)).map(x =>
+            ['TIP ' + x.cycle, esc([x.status, x.revision, x.cost ? money(x.cost) : ''].filter(Boolean).join(' · ')) + (x.id !== r.number ? ` <span class="muted">(${esc(x.id)})</span>` : '')]),
           ['Phase', `${esc(r.phase)} <span class="chip">${esc(r.group)}</span>`],
           ['Design complete', dp != null ? `<div class="meter"><span style="width:${pctOf(dp, 100)}%"></span></div><div class="meter-l"><span>${dp}%</span></div>` : ''],
           ['STIP status', tx(a.STIPstatusDescription)],
@@ -1339,6 +1500,7 @@ function reportFilters(recs) {
     $('#extent').checked && state.inTabCount > recs.length && ['Map view', `limited to the current map view (${recs.length} of ${state.inTabCount})`],
     state.includeMissing && ['Missing dates', 'included'],
     !allScopes() && ['Scope', ['Town', 'Regional', 'Statewide'].filter(k => state.scopes.has(k)).join(', ')],
+    state.tipSel && ['TIP', [...state.tipSel].map(tipCatLabel).join(', ')],
     fyActive() && ['Advertise FY', `${state.yearMode} ${state.fy.from || '…'}–${state.fy.to || '…'} (projects without an advertise date excluded)`]
   ].filter(Boolean);
   return `<div class="rp-filters">${items.map(([k, v]) => `<span><b>${esc(k)}:</b> ${esc(v)}</span>`).join('')}</div>`;
@@ -1356,7 +1518,7 @@ function reportTables(recs) {
     html += `<div class="rp-section"><h2>${heading} (${cap.length})</h2><table class="rt"><thead><tr>
       <th style="width:8%">Project</th><th>Title &amp; description</th><th style="width:13%">Towns</th><th style="width:10%">Phase</th>
       <th class="n" style="width:8%">Advertise</th><th class="n" style="width:8%">Est. complete</th><th class="n" style="width:8%">Estimate</th><th class="n" style="width:12%">Funding (fed / state)</th></tr></thead><tbody>
-      ${cap.map(r => `<tr><td><b>${esc(r.number)}</b></td><td><b>${esc(r.title)}</b>${r.description ? `<div class="d">${esc(trunc(r.description, 230))}</div>` : ''}</td>
+      ${cap.map(r => `<tr><td><b>${esc(r.number)}</b><div class="d">${esc(tipCycleText(r))}</div></td><td><b>${esc(r.title)}</b>${r.description ? `<div class="d">${esc(trunc(r.description, 230))}</div>` : ''}</td>
         <td>${esc(r.towns.join(', '))}</td><td>${esc(r.phase)}</td>
         <td class="n">${advDate(r) ? fdate(advDate(r)) + `<div class="d">${state.yearMode} ${r.fy[state.yearMode] || '—'}</div>` : '—'}</td><td class="n">${r.a.EstConstrCompletionDate ? fdate(r.a.EstConstrCompletionDate) : '—'}</td>
         <td class="n">${r.cost ? moneyShort(r.cost) : '—'}</td>
@@ -1374,6 +1536,13 @@ function reportTables(recs) {
       <th style="width:9%">Project</th><th>Route &amp; limits</th><th style="width:16%">Towns</th><th style="width:14%">Status</th><th class="n" style="width:8%">Lane-mi</th><th style="width:16%">Contractor</th></tr></thead><tbody>
       ${mrp.map(r => `<tr><td><b>${esc(r.number)}</b></td><td><b>${esc(r.title)}</b></td><td>${esc(r.towns.join(', '))}</td><td>${esc(r.phase)}</td><td class="n">${r.laneMiles || '—'}</td><td>${esc(r.a.Contractor || '—')}</td></tr>`).join('')}
       </tbody><tfoot><tr><td colspan="4">Total</td><td class="n">${mrp.reduce((s, r) => s + (r.laneMiles || 0), 0).toFixed(2)}</td><td></td></tr></tfoot></table></div>`;
+  }
+  const items = state.tab === 'tip' ? (state.visibleItems || []) : [];
+  if (items.length) {
+    html += `<div class="rp-section"><h2>TIP line items not on the map (${items.length})</h2><table class="rt"><thead><tr>
+      <th style="width:12%">ID</th><th>Title</th><th style="width:14%">TIP cycle</th><th style="width:8%">Type</th><th style="width:16%">Revision</th><th class="n" style="width:12%">Total cost</th></tr></thead><tbody>
+      ${items.map(it => `<tr><td><b>${esc(it.id)}</b></td><td>${esc(it.title)}</td><td>${esc(it.cycles.join(', '))}</td><td>${esc(it.type)}</td><td>${esc(it.revision)}${it.status && it.status !== 'Accepted' ? ` <span class="d">(${esc(it.status)})</span>` : ''}</td><td class="n">${money(it.cost)}</td></tr>`).join('')}
+      </tbody><tfoot><tr><td colspan="5">Total (latest cycle each, eco interactive)</td><td class="n">${money(items.reduce((t, it) => t + it.cost, 0))}</td></tr></tfoot></table></div>`;
   }
   return html;
 }
@@ -1452,7 +1621,10 @@ function toCSV(recs) {
     ['Advertise Date', r => r.a.CurrentADVdate ? new Date(r.a.CurrentADVdate).toISOString().slice(0, 10) : ''],
     ['Est. Construction Completion', r => r.a.EstConstrCompletionDate ? new Date(r.a.EstConstrCompletionDate).toISOString().slice(0, 10) : ''],
     ['Lane Miles', r => r.laneMiles ?? ''], ['Contractor', r => r.a.Contractor || ''], ['STIP Status', r => r.a.STIPstatusDescription || ''],
-    ['TIP Status', r => r.program === 'capital' ? tipStatusText(r) : ''],
+    ['TIP Status', r => r.program === 'capital' ? tipStatusText(r) : r.program === 'tipitem' ? 'TIP ' + r.cycles.join(', ') + ' (not mapped)' : ''],
+    ['TIP Cycles', r => (r.tipCycles || r.cycles || []).join('; ')],
+    ['TIP Basis', r => r.program === 'tipitem' ? 'Listed' : r.program !== 'capital' ? '' : r.tipCycles.length ? 'Listed' : r.tipRef ? 'By reference' : ''],
+    ['eco Total Cost (latest cycle)', r => { const L = (r.tipLines || r.lines || []).slice().sort((a, b) => cycleStart(b.cycle) - cycleStart(a.cycle))[0]; return L ? L.cost : ''; }],
     ['Advertise Date', r => advDate(r) && r.program === 'capital' ? new Date(advDate(r)).toISOString().slice(0, 10) : ''],
     ['Advertise FFY', r => r.fy.FFY ?? ''],
     ['Advertise SFY', r => r.fy.SFY ?? ''],
@@ -1472,7 +1644,11 @@ function toCSV(recs) {
   return [cols.map(c => q(c[0])).join(',')].concat(recs.map(r => cols.map(c => q(c[1](r))).join(','))).join('\r\n');
 }
 $('#csv').addEventListener('click', () => {
-  const recs = state.tab === 'funding' ? (state.visible || []).filter(r => r.fund) : (state.visible || []);
+  let recs = state.tab === 'funding' ? (state.visible || []).filter(r => r.fund) : (state.visible || []);
+  // on the TIP tab, include the unmapped TIP line items so the export reconciles with eco interactive
+  if (state.tab === 'tip') recs = recs.concat((state.visibleItems || []).map(it => ({program: 'tipitem', programLabel: 'TIP (not mapped)',
+    number: it.id, title: it.title, phase: it.status, group: it.type, towns: [], routes: '', scope: '', scopeClass: '', cost: it.cost,
+    description: it.revision, a: {}, fy: {FFY: null, SFY: null}, cycles: it.cycles, lines: it.lines})));
   const blob = new Blob(['﻿' + toCSV(recs)], {type: 'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1496,6 +1672,7 @@ $('#phase').addEventListener('change', render);
 function syncURL() {
   try {
     const u = new URL(location.href);
+    if (state.tipSel) u.searchParams.set('tip', [...state.tipSel].map(c => c.replace('–', '-')).join(',')); else u.searchParams.delete('tip');
     if (state.selTowns.size) u.searchParams.set('towns', [...state.selTowns].sort().join(',')); else u.searchParams.delete('towns');
     if (!allScopes()) u.searchParams.set('scope', ['Town', 'Regional', 'Statewide'].filter(k => state.scopes.has(k)).join(',')); else u.searchParams.delete('scope');
     if (fyActive()) u.searchParams.set('fy', (state.fy.from || '') + '-' + (state.fy.to || '')); else u.searchParams.delete('fy');
@@ -1553,7 +1730,16 @@ document.querySelector('.fy').addEventListener('click', e => {
     if (state.fy.from === a && state.fy.to === b) setFy(null, null); else setFy(a, b);   // click again to clear
   }
 });
-document.querySelector('.scope').addEventListener('click', e => {
+$('#tipf').addEventListener('click', e => {
+  const b = e.target.closest('[data-tipc]'); if (!b) return;
+  const all = state.tipCycles.concat(['ref']), c = b.dataset.tipc;
+  const sel = state.tipSel ? new Set(state.tipSel) : new Set(all);
+  if (sel.has(c)) { if (sel.size > 1) sel.delete(c); } else sel.add(c);   // keep at least one on
+  state.tipSel = sel.size === all.length ? null : sel;
+  syncURL();
+  render();
+});
+document.querySelector('#scopef').addEventListener('click', e => {
   const b = e.target.closest('[data-scope]'); if (!b) return;
   const k = b.dataset.scope;
   if (state.scopes.has(k)) { if (state.scopes.size > 1) state.scopes.delete(k); }   // keep at least one on
@@ -1682,6 +1868,10 @@ async function start(region) {
 
 (() => {
   const qs = new URLSearchParams(location.search);
+  const tq = (qs.get('tip') || '').split(',').map(x => x.trim().replace('-', '–')).filter(Boolean);
+  if (tq.length) state.tipSel = new Set(tq);
+  state.tipLoad = loadTipLists();
+  state.tipLoad.catch(() => {});   // handled in loadRegion
   const t = qs.get('towns');
   if (t) t.split(',').map(x => x.trim()).filter(Boolean).forEach(x => state.selTowns.add(x));
   const sc = (qs.get('scope') || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);

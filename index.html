@@ -166,6 +166,20 @@ table.ftab tr.tot td{font-weight:600;border-top:1px solid var(--line);color:var(
 #tip{position:fixed;z-index:1000;pointer-events:none;background:var(--navy);color:#fff;font-size:12px;padding:5px 9px;border-radius:6px;box-shadow:var(--shadow);display:none;max-width:260px}
 
 /* ---------- status / legend / footer ---------- */
+/* map lock */
+.lock-ctl{display:flex;align-items:center;gap:6px;height:34px;padding:0 10px 0 8px;border:0;border-radius:4px;cursor:pointer;
+  background:var(--navy);color:#fff;font:600 12px "Golos Text",sans-serif;text-transform:uppercase;letter-spacing:.04em;box-shadow:var(--shadow)}
+.lock-ctl:hover{background:#2c4590}
+.lock-ctl[aria-pressed="false"]{background:#fff;color:var(--navy)}
+.lock-ctl[aria-pressed="false"]:hover{background:#f1f4f9}
+.lock-ctl:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.lock-ctl svg{flex:none}
+.leaflet-control.lock-wrap{border:0!important;box-shadow:none!important;background:none!important}
+.map-locked .leaflet-control-zoom{opacity:.45;pointer-events:none}
+.map-locked.leaflet-container{cursor:default}
+#lockhint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:850;background:rgba(32,50,110,.92);color:#fff;
+  padding:9px 16px;border-radius:20px;font-size:13px;pointer-events:none;opacity:0;transition:opacity .2s;white-space:nowrap}
+#lockhint.show{opacity:1}
 #status{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:800;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);padding:7px 14px;border-radius:20px;font-size:12.5px;color:var(--ink);display:none}
 #status.err{color:var(--warn)}
 .mapwrap{position:relative;min-height:0;display:flex}
@@ -486,6 +500,7 @@ dl.kv dd a{color:var(--blue)}
   <div class="mapwrap">
     <div id="map" aria-label="Map of projects"></div>
     <div id="status" role="status"></div>
+    <div id="lockhint" aria-hidden="true">Map is locked: use the Unlock button to pan and zoom</div>
     <section id="detail" aria-label="Project details" hidden></section>
     <div class="legend" id="legend">
       <button type="button" class="lt" id="legend-btn" aria-expanded="true" aria-controls="legend">Projects</button>
@@ -706,6 +721,7 @@ function yearSlices(recs, mode) {
 const state = {
   region: null, towns: [], townGeo: null, records: [],
   tab: 'tip', selectedId: null, includeMissing: false,
+  mapLocked: true,         // map starts locked; the Unlock map button enables panning and zooming
   selTowns: new Set(),     // empty = all towns in the region
   scopes: new Set(['Town', 'Regional', 'Statewide']),   // scope filter; all on = no filtering
   tipLists: [],            // [{file, label, lines}] from the eco interactive CSVs
@@ -727,6 +743,53 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_L
 }).addTo(map);
 const townLayer = L.layerGroup().addTo(map);
 const projLayer = L.featureGroup().addTo(map);
+
+/* ---------- map lock: panning and zooming stay off until the user unlocks ---------- */
+// Choosing a project, town or "zoom to project" still moves the map; only the user's own
+// drag / scroll / pinch / double-click / keyboard / box zoom and the +/- buttons are locked.
+const LOCK_HANDLERS = ['dragging', 'scrollWheelZoom', 'doubleClickZoom', 'boxZoom', 'keyboard', 'touchZoom'];
+const ICON_LOCK = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>';
+const ICON_OPEN = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5 7V5a3 3 0 0 1 5.8-1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+const LockControl = L.Control.extend({
+  options: {position: 'topleft'},
+  onAdd() {
+    const wrap = L.DomUtil.create('div', 'leaflet-control lock-wrap');
+    const b = L.DomUtil.create('button', 'lock-ctl', wrap);
+    b.type = 'button'; b.id = 'lockbtn';
+    L.DomEvent.disableClickPropagation(wrap);
+    L.DomEvent.on(b, 'click', () => setMapLock(!state.mapLocked));
+    return wrap;
+  }
+});
+map.addControl(new LockControl());
+function setMapLock(locked) {
+  state.mapLocked = locked;
+  LOCK_HANDLERS.forEach(h => { if (map[h]) locked ? map[h].disable() : map[h].enable(); });
+  map.getContainer().classList.toggle('map-locked', locked);
+  const b = document.getElementById('lockbtn');
+  b.setAttribute('aria-pressed', locked);
+  b.innerHTML = (locked ? ICON_LOCK : ICON_OPEN) + '<span>' + (locked ? 'Unlock map' : 'Lock map') + '</span>';
+  b.title = locked ? 'Map is locked. Click to pan and zoom with the mouse, touch or keyboard.' : 'Click to lock panning and zooming.';
+  b.setAttribute('aria-label', locked ? 'Unlock map panning and zooming' : 'Lock map panning and zooming');
+  if (!locked) hideLockHint();
+}
+// a brief hint when someone tries to scroll or drag a locked map
+let lockHintTimer;
+function showLockHint() {
+  const h = document.getElementById('lockhint');
+  h.classList.add('show');
+  clearTimeout(lockHintTimer);
+  lockHintTimer = setTimeout(hideLockHint, 1600);
+}
+function hideLockHint() { document.getElementById('lockhint').classList.remove('show'); }
+map.getContainer().addEventListener('wheel', () => { if (state.mapLocked) showLockHint(); }, {passive: true});
+let lockDown = null;
+map.getContainer().addEventListener('pointerdown', e => { lockDown = state.mapLocked && !e.target.closest('.leaflet-control') ? [e.clientX, e.clientY] : null; });
+map.getContainer().addEventListener('pointermove', e => {
+  if (lockDown && e.pointerType === 'mouse' && e.buttons && Math.hypot(e.clientX - lockDown[0], e.clientY - lockDown[1]) > 12) { showLockHint(); lockDown = null; }
+});
+map.getContainer().addEventListener('pointerup', () => { lockDown = null; });
+setMapLock(state.mapLocked);
 
 function colorFor(rec) {
   if (rec.program === 'capital') return rec.group === 'Construction' ? css('--cap-con') : css('--cap-pre');
